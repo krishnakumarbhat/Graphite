@@ -2,6 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -226,11 +227,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: theme.spacing.xl,
     gap: theme.spacing.sm,
-    shadowColor: '#111418',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 20,
-    elevation: 2,
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 10px 30px rgba(17,20,24,0.08)',
+      },
+      default: {
+        shadowColor: '#111418',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.08,
+        shadowRadius: 20,
+        elevation: 2,
+      },
+    }),
   },
   sectionTitle: {
     color: theme.colors.text,
