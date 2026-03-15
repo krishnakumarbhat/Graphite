@@ -1,48 +1,44 @@
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, SafeAreaView, StyleSheet, Text, View, useColorScheme } from 'react-native';
+import { BottomTabBar } from './src/components/bottom-tab-bar';
+import { getThemeTokens } from './src/config/theme';
+import { previewSettings } from './src/data/previewData';
 import { bootstrapApp } from './src/core/bootstrap';
-import { theme } from './src/config/theme';
-
-const scopeItems = [
-  {
-    id: 'scope-item-expo-scaffold',
-    label: 'Expo app scaffold in /app/mobile',
-  },
-  {
-    id: 'scope-item-blank-model-folders',
-    label: 'Blank on-device model folders for tts, stt, and vision',
-  },
-  {
-    id: 'scope-item-sqlite-schema',
-    label: 'SQLite schema + migration runner for notes and workflows',
-  },
-  {
-    id: 'scope-item-repositories',
-    label: 'Repository helpers ready for future sync and editor layers',
-  },
-  {
-    id: 'scope-item-stop-before-ui',
-    label: 'Stop before UI screens/components pending approval',
-  },
-];
-
-const createModelDirectoryTestId = (directory) => `model-directory-${directory.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`;
+import { NoteEditorScreen } from './src/screens/note-editor-screen';
+import { NotesScreen } from './src/screens/notes-screen';
+import { SettingsScreen } from './src/screens/settings-screen';
+import { WorkflowScreen } from './src/screens/workflow-screen';
+import {
+  buildWorkflowPreview,
+  createDraftNote,
+  loadNotesForApp,
+  loadWorkflowForApp,
+  saveNoteForApp,
+  sortNotesDescending,
+} from './src/services/localDataService';
 
 export default function App() {
+  const colorScheme = useColorScheme();
+  const [themeMode, setThemeMode] = useState('system');
   const [bootState, setBootState] = useState({
     status: 'loading',
     payload: null,
     error: null,
   });
+  const [activeTab, setActiveTab] = useState('notes');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [notes, setNotes] = useState([]);
+  const [editorNote, setEditorNote] = useState(null);
+  const [workflowPreview, setWorkflowPreview] = useState(buildWorkflowPreview('Create a workflow to find VC funding'));
+  const [workflowPrompt, setWorkflowPrompt] = useState('Create a workflow to find VC funding');
+  const [settings, setSettings] = useState(previewSettings);
+
+  const resolvedThemeMode = themeMode === 'system'
+    ? (colorScheme === 'dark' ? 'dark' : 'light')
+    : themeMode;
+  const theme = useMemo(() => getThemeTokens(resolvedThemeMode), [resolvedThemeMode]);
+  const styles = useMemo(() => createStyles(theme), [theme]);
 
   useEffect(() => {
     let isMounted = true;
@@ -50,22 +46,38 @@ export default function App() {
     const startApp = async () => {
       try {
         const payload = await bootstrapApp();
+        const databaseEnabled = payload.status === 'ready';
+        const [loadedNotes, loadedWorkflow] = await Promise.all([
+          loadNotesForApp(databaseEnabled),
+          loadWorkflowForApp(databaseEnabled),
+        ]);
 
-        if (isMounted) {
-          setBootState({
-            status: payload.status,
-            payload,
-            error: null,
-          });
+        if (!isMounted) {
+          return;
         }
+
+        setNotes(loadedNotes);
+        setWorkflowPreview({
+          title: loadedWorkflow.title,
+          prompt: loadedWorkflow.prompt,
+          nodes: loadedWorkflow.nodes,
+        });
+        setWorkflowPrompt(loadedWorkflow.prompt);
+        setBootState({
+          status: 'ready',
+          payload,
+          error: null,
+        });
       } catch (error) {
-        if (isMounted) {
-          setBootState({
-            status: 'error',
-            payload: null,
-            error: error?.message ?? 'Unknown bootstrap error',
-          });
+        if (!isMounted) {
+          return;
         }
+
+        setBootState({
+          status: 'error',
+          payload: null,
+          error: error?.message ?? 'Unknown boot error',
+        });
       }
     };
 
@@ -76,221 +88,229 @@ export default function App() {
     };
   }, []);
 
+  const filteredNotes = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+
+    if (!normalizedQuery) {
+      return notes;
+    }
+
+    return notes.filter((note) => (
+      note.title.toLowerCase().includes(normalizedQuery) ||
+      note.content.toLowerCase().includes(normalizedQuery)
+    ));
+  }, [notes, searchQuery]);
+
   const isLoading = bootState.status === 'loading';
-  const payload = bootState.payload;
-  const smokeTest = payload?.smokeTest;
-  const migration = payload?.migration;
+  const databaseEnabled = bootState.payload?.status === 'ready';
+  const statusMessage = databaseEnabled ? 'Native SQLite connected' : 'Web preview uses seeded data';
+  const runtimeStatus = bootState.payload?.warning ?? 'Native runtime will use SQLite-backed notes and workflows.';
+
+  const handleCreateNote = () => {
+    setEditorNote(createDraftNote());
+  };
+
+  const handleOpenNote = (note) => {
+    setEditorNote({ ...note, isDraft: false });
+  };
+
+  const handleSaveNote = async () => {
+    if (!editorNote) {
+      return;
+    }
+
+    const savedNote = await saveNoteForApp(databaseEnabled, editorNote);
+
+    setNotes((currentNotes) => {
+      const nextNotes = currentNotes.filter((note) => note.id !== savedNote.id);
+      return sortNotesDescending([savedNote, ...nextNotes]);
+    });
+    setEditorNote(null);
+  };
+
+  const handleGenerateWorkflow = () => {
+    setWorkflowPreview(buildWorkflowPreview(workflowPrompt));
+  };
+
+  const handleToggleSetting = (key) => {
+    setSettings((current) => ({
+      ...current,
+      [key]: !current[key],
+    }));
+  };
+
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <View style={styles.loadingState} testID="mobile-app-loading-state" dataSet={{ testid: 'mobile-app-loading-state' }}>
+          <ActivityIndicator color={theme.colors.primary} size="large" />
+          <Text style={styles.loadingTitle}>Preparing your second brain</Text>
+          <Text style={styles.loadingBody}>Loading notes, workflow previews, and local-first shell.</Text>
+        </View>
+      );
+    }
+
+    if (bootState.error) {
+      return (
+        <View style={styles.loadingState} testID="mobile-app-error-state" dataSet={{ testid: 'mobile-app-error-state' }}>
+          <Text style={styles.errorTitle}>Something blocked the preview</Text>
+          <Text style={styles.errorBody}>{bootState.error}</Text>
+        </View>
+      );
+    }
+
+    if (editorNote) {
+      return (
+        <NoteEditorScreen
+          draftNote={editorNote}
+          onBack={() => setEditorNote(null)}
+          onChange={(field, value) => setEditorNote((current) => ({ ...current, [field]: value }))}
+          onSave={handleSaveNote}
+          theme={theme}
+        />
+      );
+    }
+
+    if (activeTab === 'workflow') {
+      return (
+        <WorkflowScreen
+          onChangePrompt={setWorkflowPrompt}
+          onGenerate={handleGenerateWorkflow}
+          prompt={workflowPrompt}
+          theme={theme}
+          workflow={workflowPreview}
+        />
+      );
+    }
+
+    if (activeTab === 'settings') {
+      return (
+        <SettingsScreen
+          modelDirectories={bootState.payload?.modelDirectories ?? []}
+          onToggleSetting={handleToggleSetting}
+          onToggleTheme={() => setThemeMode((current) => {
+            if (current === 'system') return 'dark';
+            if (current === 'dark') return 'light';
+            return 'system';
+          })}
+          resolvedThemeMode={resolvedThemeMode}
+          runtimeStatus={runtimeStatus}
+          settings={settings}
+          theme={theme}
+        />
+      );
+    }
+
+    return (
+      <NotesScreen
+        notes={filteredNotes}
+        onCreateNote={handleCreateNote}
+        onOpenNote={handleOpenNote}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        statusMessage={statusMessage}
+        theme={theme}
+      />
+    );
+  };
 
   return (
-    <SafeAreaView
-      style={styles.safeArea}
-      testID="app-bootstrap-screen"
-      dataSet={{ testid: 'app-bootstrap-screen' }}
-    >
-      <StatusBar style="dark" />
-      <ScrollView
-        contentContainerStyle={styles.content}
-        testID="app-bootstrap-scroll-view"
-        dataSet={{ testid: 'app-bootstrap-scroll-view' }}
-      >
-        <View style={styles.hero} testID="app-bootstrap-hero" dataSet={{ testid: 'app-bootstrap-hero' }}>
-          <Text style={styles.eyebrow} testID="app-bootstrap-phase-label" dataSet={{ testid: 'app-bootstrap-phase-label' }}>
-            Phase 1 scaffold
+    <SafeAreaView style={styles.safeArea} testID="mobile-app-root" dataSet={{ testid: 'mobile-app-root' }}>
+      <StatusBar style={resolvedThemeMode === 'dark' ? 'light' : 'dark'} />
+      <View style={styles.header} testID="mobile-app-header" dataSet={{ testid: 'mobile-app-header' }}>
+        <View style={styles.headerTextWrap}>
+          <Text style={styles.headerEyebrow} testID="mobile-app-header-eyebrow" dataSet={{ testid: 'mobile-app-header-eyebrow' }}>
+            Second Brain Mobile
           </Text>
-          <Text style={styles.title} testID="app-bootstrap-title" dataSet={{ testid: 'app-bootstrap-title' }}>
-            Second Brain mobile foundation
-          </Text>
-          <Text style={styles.body} testID="app-bootstrap-description" dataSet={{ testid: 'app-bootstrap-description' }}>
-            Offline-first Expo scaffold initialized with a local SQLite data layer and future-ready mobile folder structure.
+          <Text style={styles.headerTitle} testID="mobile-app-header-title" dataSet={{ testid: 'mobile-app-header-title' }}>
+            Autonomous executive assistant
           </Text>
         </View>
-
-        <View style={styles.card} testID="app-bootstrap-status-card" dataSet={{ testid: 'app-bootstrap-status-card' }}>
-          <Text style={styles.sectionTitle} testID="app-bootstrap-status-heading" dataSet={{ testid: 'app-bootstrap-status-heading' }}>
-            Boot status
-          </Text>
-
-          {isLoading ? (
-            <View style={styles.loadingRow} testID="app-bootstrap-loading-state" dataSet={{ testid: 'app-bootstrap-loading-state' }}>
-              <ActivityIndicator color={theme.colors.primary} />
-              <Text style={styles.cardBody} testID="app-bootstrap-loading-copy" dataSet={{ testid: 'app-bootstrap-loading-copy' }}>
-                Initializing local-first database…
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.stack} testID="app-bootstrap-ready-state" dataSet={{ testid: 'app-bootstrap-ready-state' }}>
-              <Text style={styles.statusPill} testID="app-bootstrap-status-pill" dataSet={{ testid: 'app-bootstrap-status-pill' }}>
-                {bootState.status}
-              </Text>
-              <Text style={styles.cardBody} testID="app-bootstrap-platform-text" dataSet={{ testid: 'app-bootstrap-platform-text' }}>
-                Platform: {payload?.platform ?? 'unknown'}
-              </Text>
-              <Text style={styles.cardBody} testID="app-bootstrap-migration-text" dataSet={{ testid: 'app-bootstrap-migration-text' }}>
-                Migration: {migration ? `${migration.fromVersion} → ${migration.toVersion}` : 'native-ready scaffold'}
-              </Text>
-              <Text style={styles.cardBody} testID="app-bootstrap-note-count" dataSet={{ testid: 'app-bootstrap-note-count' }}>
-                Notes in local store: {smokeTest?.notesCount ?? 0}
-              </Text>
-              <Text style={styles.cardBody} testID="app-bootstrap-workflow-count" dataSet={{ testid: 'app-bootstrap-workflow-count' }}>
-                Workflows in local store: {smokeTest?.workflowsCount ?? 0}
-              </Text>
-              {payload?.warning ? (
-                <Text style={styles.warningText} testID="app-bootstrap-warning" dataSet={{ testid: 'app-bootstrap-warning' }}>
-                  {payload.warning}
-                </Text>
-              ) : null}
-              {bootState.error ? (
-                <Text style={styles.errorText} testID="app-bootstrap-error" dataSet={{ testid: 'app-bootstrap-error' }}>
-                  {bootState.error}
-                </Text>
-              ) : null}
-            </View>
-          )}
+        <View style={styles.headerBadge} testID="mobile-app-header-badge" dataSet={{ testid: 'mobile-app-header-badge' }}>
+          <Text style={styles.headerBadgeText}>Phase 2</Text>
         </View>
+      </View>
 
-        <View style={styles.card} testID="app-bootstrap-scope-card" dataSet={{ testid: 'app-bootstrap-scope-card' }}>
-          <Text style={styles.sectionTitle} testID="app-bootstrap-scope-heading" dataSet={{ testid: 'app-bootstrap-scope-heading' }}>
-            Current scope
-          </Text>
-          {scopeItems.map((item) => (
-            <Text
-              key={item.id}
-              style={styles.listItem}
-              testID={item.id}
-              dataSet={{ testid: item.id }}
-            >
-              • {item.label}
-            </Text>
-          ))}
-        </View>
+      <View style={styles.contentWrap}>{renderContent()}</View>
 
-        <View style={styles.card} testID="app-bootstrap-model-card" dataSet={{ testid: 'app-bootstrap-model-card' }}>
-          <Text style={styles.sectionTitle} testID="app-bootstrap-model-heading" dataSet={{ testid: 'app-bootstrap-model-heading' }}>
-            Reserved local model folders
-          </Text>
-          {(payload?.modelDirectories ?? []).map((directory) => {
-            const testId = createModelDirectoryTestId(directory);
-
-            return (
-              <Text
-                key={directory}
-                style={styles.codeLine}
-                testID={testId}
-                dataSet={{ testid: testId }}
-              >
-                {directory}
-              </Text>
-            );
-          })}
-        </View>
-      </ScrollView>
+      {!editorNote ? (
+        <BottomTabBar activeTab={activeTab} onChange={setActiveTab} theme={theme} />
+      ) : null}
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (theme) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: theme.colors.background,
   },
-  content: {
+  header: {
+    alignItems: 'flex-start',
+    borderBottomColor: theme.colors.border,
+    borderBottomWidth: 1,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.xxl,
-    gap: theme.spacing.lg,
+    paddingVertical: theme.spacing.md,
   },
-  hero: {
-    gap: theme.spacing.sm,
-    paddingBottom: theme.spacing.md,
+  headerTextWrap: {
+    flex: 1,
+    gap: 2,
+    paddingRight: theme.spacing.md,
   },
-  eyebrow: {
+  headerEyebrow: {
     color: theme.colors.primaryDeep,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
-  title: {
+  headerTitle: {
     color: theme.colors.text,
-    fontSize: 30,
+    fontSize: 18,
     fontWeight: '700',
-    lineHeight: 38,
+    lineHeight: 24,
   },
-  body: {
-    color: theme.colors.textSoft,
-    fontSize: 16,
-    lineHeight: 26,
-  },
-  card: {
-    backgroundColor: theme.colors.surface,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radius.card,
-    borderWidth: 1,
-    padding: theme.spacing.xl,
-    gap: theme.spacing.sm,
-    ...Platform.select({
-      web: {
-        boxShadow: '0px 10px 30px rgba(17,20,24,0.08)',
-      },
-      default: {
-        shadowColor: '#111418',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.08,
-        shadowRadius: 20,
-        elevation: 2,
-      },
-    }),
-  },
-  sectionTitle: {
-    color: theme.colors.text,
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: theme.spacing.xs,
-  },
-  loadingRow: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: theme.spacing.sm,
-    minHeight: 32,
-  },
-  stack: {
-    gap: theme.spacing.sm,
-  },
-  statusPill: {
-    alignSelf: 'flex-start',
-    backgroundColor: theme.colors.canvas,
-    borderColor: theme.colors.border,
-    borderRadius: 999,
-    borderWidth: 1,
-    color: theme.colors.primaryDeep,
-    overflow: 'hidden',
+  headerBadge: {
+    backgroundColor: theme.colors.primarySoft,
+    borderRadius: theme.radius.pill,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.xs,
-    textTransform: 'capitalize',
   },
-  cardBody: {
-    color: theme.colors.textSoft,
-    fontSize: 15,
-    lineHeight: 24,
-  },
-  listItem: {
-    color: theme.colors.textSoft,
-    fontSize: 15,
-    lineHeight: 24,
-  },
-  codeLine: {
+  headerBadgeText: {
     color: theme.colors.primaryDeep,
-    fontFamily: 'monospace',
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 12,
+    fontWeight: '700',
   },
-  warningText: {
-    color: theme.colors.warning,
-    fontSize: 14,
-    lineHeight: 22,
+  contentWrap: {
+    flex: 1,
   },
-  errorText: {
+  loadingState: {
+    alignItems: 'flex-start',
+    flex: 1,
+    gap: theme.spacing.sm,
+    justifyContent: 'center',
+    paddingHorizontal: theme.spacing.xxl,
+  },
+  loadingTitle: {
+    color: theme.colors.text,
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  loadingBody: {
+    color: theme.colors.textSoft,
+    fontSize: 15,
+    lineHeight: 24,
+  },
+  errorTitle: {
     color: theme.colors.danger,
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  errorBody: {
+    color: theme.colors.textSoft,
+    fontSize: 15,
+    lineHeight: 24,
   },
 });

@@ -1,34 +1,47 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+body {
+  background-image:
+    radial-gradient(900px circle at 12% 0%, rgba(44, 177, 161, 0.12), transparent 42%),
+    radial-gradient(780px circle at 92% 10%, rgba(244, 176, 138, 0.12), transparent 34%);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+.preview-shell {
+  position: relative;
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+.preview-shell::before {
+  background-image: radial-gradient(rgba(17, 20, 24, 0.06) 0.6px, transparent 0.6px);
+  background-size: 12px 12px;
+  content: "";
+  inset: 0;
+  mask-image: radial-gradient(circle at center, white 24%, transparent 76%);
+  opacity: 0.05;
+  pointer-events: none;
+  position: absolute;
 }
 
-.App-link {
-    color: #61dafb;
+.preview-phone {
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow-float);
+  position: relative;
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+.preview-phone::after {
+  border: 1px solid hsl(var(--border) / 0.65);
+  border-radius: 30px;
+  content: "";
+  inset: 12px;
+  pointer-events: none;
+  position: absolute;
+}
+
+.preview-node::before {
+  background: hsl(var(--primary));
+  border-radius: 999px;
+  content: "";
+  height: 10px;
+  left: -23px;
+  opacity: 0.8;
+  position: absolute;
+  top: 24px;
+  width: 10px;
 }
