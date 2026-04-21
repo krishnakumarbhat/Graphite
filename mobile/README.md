@@ -1,41 +1,41 @@
-# Second Brain Mobile Scaffold
+# Graphite Mobile (Expo)
 
-This directory contains the new Expo-based mobile app scaffold for the V1 offline-first assistant.
+Local-first mobile app with Expo + React Native and web preview support.
 
-## Phase 1 included
-- Expo app initialized in `/app/mobile`
-- Blank local model directories created:
-  - `models/tts`
-  - `models/stt`
-  - `models/vision`
-- SQLite database layer added under `src/db/`
-  - `schema.js` for table/index definitions
-  - `migrations.js` for schema versioning with `PRAGMA user_version`
-  - `db.native.js` for the actual Expo SQLite runtime on iOS/Android
-  - `db.web.js` as a scaffold-safe adapter so Expo web can compile in this environment
-  - `notesRepo.js` and `workflowsRepo.js` for CRUD helpers
-- App bootstrap wired through `src/core/bootstrap.js`
-- Dev smoke test logs database readiness from `src/utils/devSmokeTest.js`
+## Current architecture
+- Top navigation: `Notes` + `Workflows`
+- Profile icon (top-right): opens `Profile & Settings`
+- Auth: Supabase email/password login + registration
+- Local DB: `expo-sqlite` with `users`, `notes`, `workflows`
+- Data isolation: notes/workflows are scoped by `user_id`
+- AI workflow generation: backend FastAPI endpoint with Gemini 1.5 Flash
+- Voice Note: placeholder block in Note Editor for local Whisper Tiny integration
 
-## Folder structure
-- `src/core/` bootstrapping logic
-- `src/config/` app constants + theme tokens
-- `src/db/` SQLite schema, migrations, and repositories
-- `src/services/` reserved for Supabase, Gemini, Google, sync services
-- `src/utils/` helpers and dev smoke test
-- `src/screens/` reserved for future mobile screens
-- `src/components/` reserved for future reusable UI components
-- `src/assets/` reserved for app-local assets
-- `models/` reserved for on-device TTS/STT/Vision model files
+## Environment
+Set Expo public env vars before starting:
+- `EXPO_PUBLIC_SUPABASE_URL`
+- `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+- `EXPO_PUBLIC_API_URL` (default `http://127.0.0.1:8001`)
 
-## Run locally
+## Run
 ```bash
-cd /app/mobile
-yarn web
+cd mobile
+npm install
+npm run web
 ```
 
-## Notes
-- Expo web is enabled for quick verification in this environment.
-- `expo-sqlite` remains the primary local database layer for native iOS/Android.
-- Because Expo web + `expo-sqlite` can require extra WASM configuration, the web build uses a no-op adapter while keeping the native SQLite schema/migration code fully ready for the next phase.
-- Per the current phase scope, this scaffold intentionally stops before implementing UI screens, Supabase auth, Google OAuth, markdown import/export, or Gemini workflow generation.
+## Android USB (for localhost)
+```bash
+adb devices
+adb reverse tcp:8081 tcp:8081
+adb reverse tcp:8001 tcp:8001
+```
+
+Then use phone browser / webview with:
+- `http://127.0.0.1:8081` (Expo web)
+- `http://127.0.0.1:8001/api/health` (backend health)
+
+## Local model directories
+- `models/tts`
+- `models/stt`
+- `models/vision`

@@ -34,6 +34,20 @@ export const NoteEditorScreen = ({ draftNote, onBack, onSave, onChange, theme })
         </Pressable>
       </View>
 
+      <Pressable
+        onPress={() => {
+          const voicePlaceholder = `\n\n[Voice note]\n(whisper-tiny placeholder) Transcribed text will appear here once local STT is connected.`;
+          const nextContent = `${draftNote.content || ''}${voicePlaceholder}`.trim();
+          onChange('content', nextContent);
+        }}
+        style={styles.voiceButton}
+        testID="editor-voice-note-button"
+        dataSet={{ testid: 'editor-voice-note-button' }}
+      >
+        <Feather color="#FFFFFF" name="mic" size={16} />
+        <Text style={styles.voiceButtonText}>Voice note</Text>
+      </Pressable>
+
       <SectionCard theme={theme} testID="note-editor-card">
         <Text style={styles.eyebrow}>Block-based editor placeholder</Text>
         <TextInput
@@ -117,6 +131,22 @@ const createStyles = (theme) => StyleSheet.create({
   primaryButtonText: {
     color: '#FFFFFF',
     fontSize: 14,
+    fontWeight: '700',
+  },
+  voiceButton: {
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.radius.control,
+    flexDirection: 'row',
+    gap: 8,
+    minHeight: 42,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.sm,
+  },
+  voiceButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
     fontWeight: '700',
   },
   eyebrow: {

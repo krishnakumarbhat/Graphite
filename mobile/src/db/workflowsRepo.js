@@ -3,10 +3,15 @@ import { getAll, getFirst, runQuery } from './db';
 import { createUuid } from '../utils/id';
 import { createIsoTimestamp } from '../utils/time';
 
-export const createWorkflow = async ({ title = DEFAULT_WORKFLOW_TITLE, prompt = '', graphJson = null } = {}) => {
+export const createWorkflow = async ({ userId, title = DEFAULT_WORKFLOW_TITLE, prompt = '', graphJson = null } = {}) => {
+  if (!userId) {
+    throw new Error('userId is required to create a workflow.');
+  }
+
   const timestamp = createIsoTimestamp();
   const workflow = {
     id: createUuid(),
+    user_id: userId,
     title: title?.trim() || DEFAULT_WORKFLOW_TITLE,
     prompt,
     graph_json: graphJson,
@@ -15,10 +20,11 @@ export const createWorkflow = async ({ title = DEFAULT_WORKFLOW_TITLE, prompt = 
   };
 
   await runQuery(
-    `INSERT INTO workflows (id, title, prompt, graph_json, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?);`,
+    `INSERT INTO workflows (id, user_id, title, prompt, graph_json, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?);`,
     [
       workflow.id,
+      workflow.user_id,
       workflow.title,
       workflow.prompt,
       workflow.graph_json,
@@ -30,17 +36,18 @@ export const createWorkflow = async ({ title = DEFAULT_WORKFLOW_TITLE, prompt = 
   return workflow;
 };
 
-export const listWorkflows = async () => getAll(
-  'SELECT id, title, prompt, graph_json, created_at, updated_at FROM workflows ORDER BY updated_at DESC;'
+export const listWorkflows = async (userId) => getAll(
+  'SELECT id, user_id, title, prompt, graph_json, created_at, updated_at FROM workflows WHERE user_id = ? ORDER BY updated_at DESC;',
+  [userId],
 );
 
-export const getWorkflowById = async (workflowId) => getFirst(
-  'SELECT id, title, prompt, graph_json, created_at, updated_at FROM workflows WHERE id = ? LIMIT 1;',
-  [workflowId],
+export const getWorkflowById = async (workflowId, userId) => getFirst(
+  'SELECT id, user_id, title, prompt, graph_json, created_at, updated_at FROM workflows WHERE id = ? AND user_id = ? LIMIT 1;',
+  [workflowId, userId],
 );
 
-export const updateWorkflow = async (workflowId, updates = {}) => {
-  const existingWorkflow = await getWorkflowById(workflowId);
+export const updateWorkflow = async (workflowId, userId, updates = {}) => {
+  const existingWorkflow = await getWorkflowById(workflowId, userId);
 
   if (!existingWorkflow) {
     return null;
@@ -57,25 +64,26 @@ export const updateWorkflow = async (workflowId, updates = {}) => {
   await runQuery(
     `UPDATE workflows
      SET title = ?, prompt = ?, graph_json = ?, updated_at = ?
-     WHERE id = ?;`,
+     WHERE id = ? AND user_id = ?;`,
     [
       nextWorkflow.title,
       nextWorkflow.prompt,
       nextWorkflow.graph_json,
       nextWorkflow.updated_at,
       workflowId,
+      userId,
     ],
   );
 
-  return getWorkflowById(workflowId);
+  return getWorkflowById(workflowId, userId);
 };
 
-export const deleteWorkflow = async (workflowId) => {
-  await runQuery('DELETE FROM workflows WHERE id = ?;', [workflowId]);
+export const deleteWorkflow = async (workflowId, userId) => {
+  await runQuery('DELETE FROM workflows WHERE id = ? AND user_id = ?;', [workflowId, userId]);
   return true;
 };
 
-export const countWorkflows = async () => {
-  const result = await getFirst('SELECT COUNT(*) as count FROM workflows;');
+export const countWorkflows = async (userId) => {
+  const result = await getFirst('SELECT COUNT(*) as count FROM workflows WHERE user_id = ?;', [userId]);
   return Number(result?.count ?? 0);
 };

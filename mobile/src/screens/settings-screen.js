@@ -22,7 +22,7 @@ export const SettingsScreen = ({
       <SectionHeader
         eyebrow="Settings"
         title="Keep your assistant local-first"
-        description="Phase 2 surfaces theme, reminders, sync placeholders, and model storage visibility."
+        description="This view surfaces theme, reminders, sync placeholders, and model storage visibility."
         theme={theme}
         testID="settings-screen-header"
       />

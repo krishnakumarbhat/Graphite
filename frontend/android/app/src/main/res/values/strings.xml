@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Graphite Agents</string>
+    <string name="title_activity_main">Graphite Agents</string>
+    <string name="package_name">com.graphite.agents</string>
+    <string name="custom_url_scheme">com.graphite.agents</string>
+</resources>

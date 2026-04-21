@@ -1,4 +1,5 @@
 import { DEFAULT_NOTE_TITLE } from '../config/constants';
+import { generateWorkflowFromApi } from './workflowService';
 import { previewNotes, previewWorkflow } from '../data/previewData';
 import { createNote, listNotes, updateNote } from '../db/notesRepo';
 import { listWorkflows } from '../db/workflowsRepo';
@@ -22,13 +23,13 @@ const sortByUpdatedAt = (items = []) => [...items].sort((left, right) => (
   new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime()
 ));
 
-export const loadNotesForApp = async (databaseEnabled) => {
+export const loadNotesForApp = async (databaseEnabled, userId) => {
   if (!databaseEnabled) {
     return sortByUpdatedAt(previewNotes);
   }
 
   try {
-    const notes = await listNotes();
+    const notes = await listNotes(userId);
     return notes.length ? sortByUpdatedAt(notes) : sortByUpdatedAt(previewNotes);
   } catch (error) {
     console.warn('[notes] Falling back to preview notes:', error?.message ?? error);
@@ -36,33 +37,41 @@ export const loadNotesForApp = async (databaseEnabled) => {
   }
 };
 
-export const saveNoteForApp = async (databaseEnabled, draftNote) => {
+export const saveNoteForApp = async (databaseEnabled, draftNote, userId) => {
   if (!databaseEnabled) {
-    return createFallbackNote(draftNote);
+    return {
+      ...createFallbackNote(draftNote),
+      user_id: userId,
+    };
   }
 
   try {
     if (draftNote.isDraft) {
       return await createNote({
+        userId,
         title: draftNote.title,
         content: draftNote.content,
         sourcePath: draftNote.source_path ?? 'local://editor',
       });
     }
 
-    return await updateNote(draftNote.id, {
+    return await updateNote(draftNote.id, userId, {
       title: draftNote.title,
       content: draftNote.content,
       sourcePath: draftNote.source_path,
     });
   } catch (error) {
     console.warn('[notes] Falling back to local save:', error?.message ?? error);
-    return createFallbackNote(draftNote);
+    return {
+      ...createFallbackNote(draftNote),
+      user_id: userId,
+    };
   }
 };
 
 export const createDraftNote = () => ({
   id: createUuid(),
+  user_id: null,
   title: '',
   content: '',
   created_at: createIsoTimestamp(),
@@ -71,13 +80,13 @@ export const createDraftNote = () => ({
   isDraft: true,
 });
 
-export const loadWorkflowForApp = async (databaseEnabled) => {
+export const loadWorkflowForApp = async (databaseEnabled, userId) => {
   if (!databaseEnabled) {
     return previewWorkflow;
   }
 
   try {
-    const workflows = await listWorkflows();
+    const workflows = await listWorkflows(userId);
 
     if (!workflows.length) {
       return previewWorkflow;
@@ -126,6 +135,16 @@ export const buildWorkflowPreview = (prompt) => {
       },
     ],
   };
+};
+
+export const generateWorkflowForApp = async (prompt) => {
+  try {
+    const generated = await generateWorkflowFromApi(prompt);
+    return generated.nodes.length ? generated : buildWorkflowPreview(prompt);
+  } catch (error) {
+    console.warn('[workflow] API generation failed, using local preview:', error?.message ?? error);
+    return buildWorkflowPreview(prompt);
+  }
 };
 
 export const sortNotesDescending = sortByUpdatedAt;
