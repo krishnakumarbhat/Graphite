@@ -101,3 +101,80 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Refactor the web/backend surface to Flask, keep the mobile client contract stable, and validate the changed Python slice."
+backend:
+	- task: "Flask backend refactor"
+		implemented: true
+		working: true
+		file: "backend/server.py"
+		stuck_count: 0
+		priority: "high"
+		needs_retesting: false
+		status_history:
+			- working: "NA"
+				agent: "main"
+				comment: "Replaced the FastAPI single-file backend with a Flask app factory, Pydantic validation, shared services, and static web serving."
+			- working: true
+				agent: "main"
+				comment: "Verified with focused pytest coverage and Ruff after the final backend cleanup."
+	- task: "Backend regression tests"
+		implemented: true
+		working: true
+		file: "tests/test_backend_server.py"
+		stuck_count: 0
+		priority: "high"
+		needs_retesting: false
+		status_history:
+			- working: "NA"
+				agent: "main"
+				comment: "Added focused pytest coverage for health, workflow validation, agent status, and Flask-served web fallback routes."
+			- working: true
+				agent: "main"
+				comment: "Backend tests passed in the final combined pytest run."
+	- task: "Edge model asset scaffold"
+		implemented: true
+		working: true
+		file: "scripts/generate_edge_model_assets.py"
+		stuck_count: 0
+		priority: "high"
+		needs_retesting: false
+		status_history:
+			- working: "NA"
+				agent: "main"
+				comment: "Added Python tooling for mobile model manifests, export plans, dummy fixtures, and generated documentation for STT and TTS selection."
+			- working: true
+				agent: "main"
+				comment: "Edge-model asset generation and verification passed after Ruff cleanup."
+	- task: "Edge model asset tests"
+		implemented: true
+		working: true
+		file: "tests/test_edge_model_assets.py"
+		stuck_count: 0
+		priority: "high"
+		needs_retesting: false
+		status_history:
+			- working: "NA"
+				agent: "main"
+				comment: "Added focused validation for generated model manifests, docs, and dummy audio or text fixtures."
+			- working: true
+				agent: "main"
+				comment: "Combined pytest run passed for backend and edge-model tests."
+frontend: []
+metadata:
+	created_by: "main_agent"
+	version: "1.0"
+	test_sequence: 2
+	run_ui: false
+test_plan:
+	current_focus:
+		- "Edge model asset scaffold"
+		- "Edge model asset tests"
+	stuck_tasks: []
+	test_all: false
+	test_priority: "high_first"
+agent_communication:
+	- agent: "main"
+		message: "Backend was refactored to Flask and now needs focused pytest validation before any wider model or documentation follow-up."
+	- agent: "main"
+		message: "Edge model tooling is ready for focused generation and pytest validation without changing the mobile runtime behavior."

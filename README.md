@@ -1,37 +1,46 @@
 # Graphite
 
-Local-first notes + workflows application built as a mobile-first Expo app with a FastAPI backend.
+Local-first notes + workflows application built as a mobile-first Expo app with a Flask backend.
 
 ## Stack
 - Mobile  + Web preview: React Native + Expo
 - Local DB (mobile): expo-sqlite
 - Cloud DB: Supabase (PostgreSQL + pgvector)
 - Auth: Supabase Auth (email/password)
-- Backend API: FastAPI + Uvicorn
+- Backend API: Flask
 - AI workflow engine: Gemini 1.5 Flash
 - Local STT target: Whisper Tiny (placeholder wired in Note Editor)
 
 ## Monorepo layout
 - `mobile/` — primary client (native + web preview)
-- `backend/` — API and Gemini workflow generation
+- `backend/` — Flask API, Gemini workflow generation, and static web serving
 - `frontend/` — legacy web package (CRACO removed from scripts)
 - `docs/` — architecture and contribution docs
+- `scripts/` — Python tooling for model manifests, dummy fixtures, and validation
 
 ## Quick start
 
 ### 1) Backend (localhost:8001)
 ```bash
-cd backend
 cp .env.example .env
+
+cd backend
 pip3 install --user -r requirements.txt
-python3 -m uvicorn --app-dir . server:app --reload --port 8001
+python3 server.py
 ```
 
-Required in `backend/.env`:
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `GEMINI_API_KEY`
-- `GEMINI_MODEL` (default: `gemini-1.5-flash`)
+Preferred local setup:
+- Use the repo-root `.env` created from `.env.example`.
+- `backend/.env` is still supported for legacy local setups.
+- `.env` and `backend/.env` are gitignored and should never be committed.
+
+Required for the root `.env` example:
+- `superbase_api`
+- `superbase_pub_key`
+- `gemini_api`
+
+Optional for backend writes to Supabase:
+- `superbase_secret_key`
 
 ### 2) Mobile app + web preview (localhost:8081)
 Set env vars in your shell:
@@ -90,6 +99,16 @@ Store your local models under:
 - `mobile/models/stt`
 - `mobile/models/vision`
 
+Bootstrap the edge-model workspace and dummy fixtures:
+```bash
+.venv/bin/python scripts/generate_edge_model_assets.py
+```
+
+Validate the backend and model workspace:
+```bash
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/python -m pytest tests/test_backend_server.py tests/test_edge_model_assets.py
+```
+
 ## Open-source docs
 - `CONTRIBUTING.md`
 - `CODE_OF_CONDUCT.md`
@@ -97,3 +116,6 @@ Store your local models under:
 - `RULES.md`
 - `docs/ARCHITECTURE.md`
 - `docs/UI_PARITY.md`
+- `docs/EDGE_MODEL_MATRIX.md`
+- `docs/NOTEBOOK_LLM_GUIDE.md`
+- `docs/PROFILING.md`

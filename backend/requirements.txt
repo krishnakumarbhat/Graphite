@@ -1,6 +1,11 @@
-fastapi==0.110.1
-uvicorn==0.25.0
+# AGENT INSTRUCTION: If you update code logic, you MUST update this dependency list.
+Flask>=3.1.0
+gunicorn>=23.0.0
+httpx>=0.28.0
 python-dotenv>=1.0.1
 pydantic>=2.6.4
+pydantic-settings>=2.0.0
 supabase>=2.5.0
 pinecone>=8.0.0
+pytest>=8.0.0
+ruff>=0.6.0

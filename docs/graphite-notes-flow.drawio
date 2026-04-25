@@ -1,0 +1,55 @@
+<mxfile host="app.diagrams.net" modified="2026-04-25T00:00:00.000Z" agent="GitHub Copilot" version="26.0.11">
+  <diagram id="graphite-notes-flow" name="Notes Flow">
+    <mxGraphModel dx="1420" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="2" value="User opens /notes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f7f2;strokeColor=#2cb1a1;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="60" y="280" width="180" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="3" value="NotesPage&#10;load pages&#10;search&#10;edit" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e8;strokeColor=#f4b08a;" vertex="1" parent="1">
+          <mxGeometry x="320" y="260" width="210" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="4" value="GET /api/notes&#10;POST /api/notes&#10;POST /api/notes/import" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef4ff;strokeColor=#3b82f6;" vertex="1" parent="1">
+          <mxGeometry x="610" y="250" width="220" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="5" value="SQLite note store" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3f4f6;strokeColor=#64748b;" vertex="1" parent="1">
+          <mxGeometry x="920" y="180" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="6" value="Best-effort Supabase mirror" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ecfeff;strokeColor=#0891b2;" vertex="1" parent="1">
+          <mxGeometry x="920" y="320" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="7" value="POST /api/notes/ai-draft" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f6f0ff;strokeColor=#8b5cf6;" vertex="1" parent="1">
+          <mxGeometry x="610" y="470" width="220" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="8" value="Gemini draft generation&#10;thinking: high when accepted" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff1f2;strokeColor=#ef4444;" vertex="1" parent="1">
+          <mxGeometry x="920" y="470" width="220" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="9" value="Browser localStorage fallback&#10;only when backend is down" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8fafc;strokeColor=#94a3b8;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="320" y="470" width="210" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="10" style="endArrow=block;html=1;strokeColor=#2cb1a1;strokeWidth=2;" edge="1" parent="1" source="2" target="3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="11" style="endArrow=block;html=1;strokeColor=#3b82f6;strokeWidth=2;" edge="1" parent="1" source="3" target="4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="12" style="endArrow=block;html=1;strokeColor=#64748b;strokeWidth=2;" edge="1" parent="1" source="4" target="5">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="13" style="endArrow=block;html=1;strokeColor=#0891b2;strokeWidth=2;dashed=1;" edge="1" parent="1" source="4" target="6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="14" style="endArrow=block;html=1;strokeColor=#8b5cf6;strokeWidth=2;" edge="1" parent="1" source="3" target="7">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="15" style="endArrow=block;html=1;strokeColor=#ef4444;strokeWidth=2;" edge="1" parent="1" source="7" target="8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="16" style="endArrow=block;html=1;strokeColor=#94a3b8;strokeWidth=2;dashed=1;" edge="1" parent="1" source="3" target="9">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -28,12 +28,17 @@ export const AGENT_NODES = [
     type: 'agentNode',
     position: { x: 50, y: 380 },
     data: {
-      label: 'Financial Intelligence',
+      label: 'Tradezy Finance',
       role: 'agent',
-      description: 'Bookkeeping, budget optimization, forecasting.',
+      description: 'Bookkeeping, budget optimization, forecasting, and market signal tracking.',
       agentKey: 'finance',
       color: '#10b981',
-      capabilities: ['Automated Bookkeeping', 'Budget Optimization', 'Forecasting'],
+      capabilities: [
+        'Automated Bookkeeping',
+        'Budget Optimization',
+        'Forecasting',
+        'Market Signals',
+      ],
     },
   },
   {
@@ -41,12 +46,17 @@ export const AGENT_NODES = [
     type: 'agentNode',
     position: { x: 300, y: 380 },
     data: {
-      label: 'VC & Fundraising',
+      label: 'VC Search',
       role: 'agent',
-      description: 'Investor matching, outreach automation, due diligence prep.',
+      description: 'Investor matching, thesis search, outreach automation, and diligence prep.',
       agentKey: 'vc',
       color: '#f59e0b',
-      capabilities: ['Investor Matching', 'Outreach Automation', 'Due Diligence Prep'],
+      capabilities: [
+        'Investor Matching',
+        'Thesis Search',
+        'Outreach Automation',
+        'Due Diligence Prep',
+      ],
     },
   },
   {
@@ -54,12 +64,17 @@ export const AGENT_NODES = [
     type: 'agentNode',
     position: { x: 550, y: 380 },
     data: {
-      label: 'Career & Talent',
+      label: 'Job Search',
       role: 'agent',
-      description: 'Job scanning, application management, interview prep.',
+      description: 'Job scanning, application management, role fit scoring, and interview prep.',
       agentKey: 'career',
       color: '#ec4899',
-      capabilities: ['Job Market Scanning', 'Application Management', 'Interview Prep'],
+      capabilities: [
+        'Job Market Scanning',
+        'Application Management',
+        'Role Fit Scoring',
+        'Interview Prep',
+      ],
     },
   },
   {
@@ -67,12 +82,17 @@ export const AGENT_NODES = [
     type: 'agentNode',
     position: { x: 800, y: 380 },
     data: {
-      label: 'Autonomous Data Engine',
+      label: 'Trend Scout',
       role: 'agent',
-      description: 'High-frequency monitoring every 30 min, info synthesis, trigger-based actions.',
+      description: 'High-frequency monitoring, info synthesis, and trend-triggered actions.',
       agentKey: 'scraper',
       color: '#ef4444',
-      capabilities: ['High-Frequency Monitoring', 'Information Synthesis', 'Trigger-Based Actions'],
+      capabilities: [
+        'High-Frequency Monitoring',
+        'Information Synthesis',
+        'Trend Detection',
+        'Trigger-Based Actions',
+      ],
     },
   },
   {

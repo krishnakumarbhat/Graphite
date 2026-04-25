@@ -19,6 +19,27 @@ body {
   position: absolute;
 }
 
+.workspace-sidebar {
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.6)),
+    radial-gradient(520px circle at top left, rgba(44, 177, 161, 0.14), transparent 42%);
+}
+
+.dark .workspace-sidebar {
+  background-image:
+    linear-gradient(180deg, rgba(11, 16, 21, 0.92), rgba(11, 16, 21, 0.82)),
+    radial-gradient(520px circle at top left, rgba(44, 177, 161, 0.18), transparent 42%);
+}
+
+.workspace-nav-link {
+  display: block;
+}
+
+.notes-editor {
+  backdrop-filter: blur(8px);
+  resize: vertical;
+}
+
 .preview-phone {
   backdrop-filter: blur(18px);
   box-shadow: var(--shadow-float);

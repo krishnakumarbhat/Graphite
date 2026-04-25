@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:8000/api';
+const API_BASE = process.env.REACT_APP_API_URL || `${window.location.origin}/api`;
 
 const client = axios.create({
   baseURL: API_BASE,
@@ -11,6 +11,34 @@ const client = axios.create({
 export async function fetchHealth() {
   const { data } = await client.get('/health');
   return data;
+}
+
+export async function fetchNotes(userId = 'web-local') {
+  const { data } = await client.get('/notes', { params: { user_id: userId } });
+  return data.items;
+}
+
+export async function saveNote(note) {
+  const { data } = await client.post('/notes', note);
+  return data.item;
+}
+
+export async function importMarkdownNote(filename, content, userId = 'web-local') {
+  const { data } = await client.post('/notes/import', {
+    filename,
+    content,
+    user_id: userId,
+  });
+  return data.item;
+}
+
+export async function generateAiNote(prompt, titleHint = '', userId = 'web-local') {
+  const { data } = await client.post('/notes/ai-draft', {
+    prompt,
+    title_hint: titleHint,
+    user_id: userId,
+  });
+  return data.item;
 }
 
 export async function generateWorkflow(prompt) {
