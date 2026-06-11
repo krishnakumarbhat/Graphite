@@ -230,7 +230,7 @@ export const AppPreviewShell = () => {
     setMemoryLoading(true);
     try {
       const resp = await storeMemory(memoryStoreText.trim());
-      toast.success(`Stored in Pinecone: ${resp.id}`);
+      toast.success(`Stored in PGVECTOR: ${resp.id}`);
       setMemoryStoreText('');
     } catch (err) {
       const msg = err?.response?.data?.detail || err.message || 'Failed';
@@ -281,8 +281,8 @@ export const AppPreviewShell = () => {
                 API: {backendHealth.status === 'ok' ? 'Connected' : 'Offline'}
               </Badge>
             )}
-            {backendHealth?.pineconeConfigured && (
-              <Badge className="bg-purple-500/15 text-purple-600">Pinecone: Active</Badge>
+            {backendHealth?.PGVECTORConfigured && (
+              <Badge className="bg-purple-500/15 text-purple-600">PGVECTOR: Active</Badge>
             )}
           </div>
           <div className="space-y-3">
@@ -290,11 +290,11 @@ export const AppPreviewShell = () => {
               Autonomous Multi-Agent System
             </p>
             <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-              Manager-Worker AI Architecture with Pinecone Memory
+              Manager-Worker AI Architecture with PGVECTOR Memory
             </h1>
             <p className="max-w-2xl text-base leading-7 text-muted-foreground">
               Finance, VC, Career, and Scraper agents orchestrated by Gemini AI Core.
-              Vector memory backed by Pinecone. Workflows via React Flow.
+              Vector memory backed by PGVECTOR. Workflows via React Flow.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -601,13 +601,13 @@ export const AppPreviewShell = () => {
                 )}
               </TabsContent>
 
-              {/* ===== MEMORY TAB (Pinecone) ===== */}
+              {/* ===== MEMORY TAB (PGVECTOR) ===== */}
               <TabsContent className="mt-0" value="memory">
                 <div className="space-y-4">
                   <Card className="rounded-2xl border-border/80 bg-card/95">
                     <CardContent className="space-y-4 p-5">
                       <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                        Store Memory (Pinecone Vector DB)
+                        Store Memory (PGVECTOR Vector DB)
                       </p>
                       <Textarea
                         className="min-h-[80px] rounded-xl border-input bg-secondary/35 text-sm"
@@ -621,7 +621,7 @@ export const AppPreviewShell = () => {
                         disabled={memoryLoading || !memoryStoreText.trim()}
                       >
                         {memoryLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Database className="mr-2 h-4 w-4" />}
-                        Store in Pinecone
+                        Store in PGVECTOR
                       </Button>
                     </CardContent>
                   </Card>
@@ -722,9 +722,9 @@ export const AppPreviewShell = () => {
                         </Badge>
                       </div>
                       <div className="flex justify-between">
-                        <span>Pinecone</span>
-                        <Badge variant={backendHealth?.pineconeConfigured ? 'default' : 'secondary'}>
-                          {backendHealth?.pineconeConfigured ? 'Active' : 'Not connected'}
+                        <span>PGVECTOR</span>
+                        <Badge variant={backendHealth?.PGVECTORConfigured ? 'default' : 'secondary'}>
+                          {backendHealth?.PGVECTORConfigured ? 'Active' : 'Not connected'}
                         </Badge>
                       </div>
                       <div className="flex justify-between">

@@ -6,6 +6,15 @@ python-dotenv>=1.0.1
 pydantic>=2.6.4
 pydantic-settings>=2.0.0
 supabase>=2.5.0
-pinecone>=8.0.0
+yfinance>=0.2.50
+google-adk>=1.25.0,<1.30.0
+google-genai>=1.13.0
+kittentts @ https://github.com/KittenML/KittenTTS/releases/download/0.8.1/kittentts-0.8.1-py3-none-any.whl
+huggingface-hub>=0.34.0
+onnxruntime>=1.19.0
+pywhispercpp>=1.5.0
+soundfile>=0.13.0
+redis>=5.2.1
 pytest>=8.0.0
+pytest-asyncio>=0.23.0
 ruff>=0.6.0

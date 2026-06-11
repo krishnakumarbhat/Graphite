@@ -22,7 +22,7 @@
         <mxCell id="7" value="Gemini&#10;Workflow generation&#10;AI note drafting" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff1f2;strokeColor=#ef4444;" vertex="1" parent="1">
           <mxGeometry x="1080" y="290" width="230" height="110" as="geometry" />
         </mxCell>
-        <mxCell id="8" value="Pinecone&#10;Vector memory search" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f3ff;strokeColor=#7c3aed;" vertex="1" parent="1">
+        <mxCell id="8" value="PGVECTOR&#10;Vector memory search" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f3ff;strokeColor=#7c3aed;" vertex="1" parent="1">
           <mxGeometry x="1080" y="470" width="230" height="100" as="geometry" />
         </mxCell>
         <mxCell id="9" value="Supabase Mirror&#10;notes&#10;note_embeddings" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ecfeff;strokeColor=#0891b2;" vertex="1" parent="1">

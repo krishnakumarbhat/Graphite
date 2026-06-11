@@ -71,6 +71,7 @@ def create_app(settings: Settings | None = None) -> Flask:
 
   app = Flask(__name__, static_folder=None)
   app.config['JSON_SORT_KEYS'] = False
+  app.extensions['graphite_services'] = services
   app.register_blueprint(build_api_blueprint(services))
   _register_error_handlers(app)
   _register_cors(app, resolved_settings)

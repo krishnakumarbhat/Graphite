@@ -96,3 +96,41 @@ class MemorySearchRequest(BaseModel):
 class OrchestrateRequest(BaseModel):
   agent: str = Field(min_length=1)
   task: str = Field(min_length=1, max_length=4000)
+
+
+class ProjectAnalyzeRequest(BaseModel):
+  project_path: str = Field(min_length=1, max_length=4096)
+  project_name: str = Field(default='', max_length=240)
+  user_id: str = 'web-local'
+
+
+class EvalRunRequest(BaseModel):
+  eval_set_path: str = Field(default='', max_length=4096)
+  config_path: str = Field(default='', max_length=4096)
+
+
+class ResearchRequest(BaseModel):
+  ticker: str = Field(min_length=1, max_length=10)
+  algorithms: list[str] = Field(default_factory=lambda: ['ma', 'rsi', 'macd', 'bollinger'])
+
+
+class DeepResearchRequest(BaseModel):
+  query: str = Field(min_length=1, max_length=4000)
+  source_text: str = Field(default='', max_length=120000)
+  user_id: str = 'web-local'
+  retrieval_mode: str = Field(default='fixed', pattern='^(fixed|gemini|hybrid)$')
+  max_chunks: int = Field(default=6, ge=2, le=12)
+  save_as_note: bool = True
+
+
+class TTSRequest(BaseModel):
+  text: str = Field(min_length=1, max_length=20000)
+  provider: str = Field(default='kitten', pattern='^(kitten|espeak)$')
+  voice: str = Field(default='Bruno', max_length=32)
+  speed: float = Field(default=1.0, ge=0.7, le=1.4)
+
+
+class TTSCompareRequest(BaseModel):
+  text: str = Field(min_length=1, max_length=20000)
+  voice: str = Field(default='Bruno', max_length=32)
+  speed: float = Field(default=1.0, ge=0.7, le=1.4)

@@ -1,40 +1,49 @@
 import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  BookText,
   Bot,
-  CloudOff,
-  Database,
-  FileText,
+  ChevronRight,
   FileUp,
   Loader2,
+  LogIn,
+  Mic,
+  MoreHorizontal,
   Plus,
-  Save,
   Search,
-  Sparkles,
+  Square,
+  Volume2,
 } from 'lucide-react';
+import { NavLink } from 'react-router-dom';
 
-import { useWorkspaceShell } from '@/components/workspace/app-workspace-shell';
-import { previewNotes } from '@/components/preview/preview-data';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/sonner';
-import { fetchNotes, generateAiNote, importMarkdownNote, saveNote } from '@/lib/api';
+import {
+  fetchNotes,
+  filterNotesByTag,
+  generateAiNote,
+  importMarkdownNote,
+  resolveApiUrl,
+  saveNote,
+  searchNotes,
+  synthesizeSpeech,
+  transcribeSpeech,
+} from '@/lib/api';
+import { useAuth } from '@/lib/auth-context';
+import { Badge } from '@/components/ui/badge';
 
-const USER_ID = 'web-local';
+const GUEST_LIMIT = 5;
 const LOCAL_STORAGE_KEY = 'graphite.notes.local';
 
 const createDraftNote = (seed = {}) => {
   const timestamp = new Date().toISOString();
   return {
     id: seed.id || `draft-${Date.now()}`,
-    user_id: seed.user_id || USER_ID,
+    user_id: seed.user_id || 'web-local',
     title: seed.title || '',
     content: seed.content || '',
-    excerpt: seed.excerpt || 'Fresh note draft',
+    excerpt: seed.excerpt || '',
+    tags: Array.isArray(seed.tags) ? seed.tags : [],
     source_path: seed.source_path || null,
     created_at: seed.created_at || timestamp,
     updated_at: seed.updated_at || timestamp,
@@ -44,11 +53,7 @@ const createDraftNote = (seed = {}) => {
 
 const buildExcerpt = (content) => {
   const normalized = content.trim().replace(/\s+/g, ' ');
-  if (!normalized) {
-    return 'Fresh note draft';
-  }
-
-  return normalized.length > 160 ? `${normalized.slice(0, 157)}...` : normalized;
+  return normalized.length > 120 ? `${normalized.slice(0, 117)}...` : normalized;
 };
 
 const inferTitle = (title, content) => {
@@ -61,7 +66,7 @@ const inferTitle = (title, content) => {
     .map((line) => line.replace(/^#+\s*/, '').trim())
     .find(Boolean);
 
-  return firstLine || 'Untitled note';
+  return firstLine || 'Untitled';
 };
 
 const normalizeNote = (note) =>
@@ -88,55 +93,117 @@ const persistLocalNotes = (notes) => {
   window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(notes));
 };
 
-const upsertNotes = (currentNotes, note) => {
-  const nextNotes = [note, ...currentNotes.filter((item) => item.id !== note.id)];
-  return nextNotes.sort((left, right) => right.updated_at.localeCompare(left.updated_at));
+const upsertNotes = (currentNotes, note) =>
+  [note, ...currentNotes.filter((item) => item.id !== note.id)].sort((left, right) =>
+    right.updated_at.localeCompare(left.updated_at),
+  );
+
+const appendTranscript = (content, transcript) => {
+  const normalizedTranscript = transcript.trim();
+  if (!normalizedTranscript) {
+    return content;
+  }
+
+  const normalizedContent = content.trim();
+  if (!normalizedContent) {
+    return normalizedTranscript;
+  }
+
+  return `${normalizedContent}\n\n${normalizedTranscript}`;
 };
 
-const BLOCK_TEMPLATES = {
-  heading: '\n## Section\n',
-  checklist: '\n- [ ] First task\n- [ ] Second task\n',
-  meeting: '\n## Meeting Notes\n\n### Context\n\n### Decisions\n\n### Next steps\n- [ ] \n',
+const buildTagCounts = (items) =>
+  items.reduce((counts, note) => {
+    (note.tags || []).forEach((tag) => {
+      counts[tag] = (counts[tag] || 0) + 1;
+    });
+    return counts;
+  }, {});
+
+const getPreferredRecorderMimeType = () => {
+  if (typeof window === 'undefined' || typeof window.MediaRecorder === 'undefined') {
+    return '';
+  }
+
+  const candidates = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/ogg;codecs=opus',
+    'audio/ogg',
+  ];
+
+  return candidates.find((mimeType) => window.MediaRecorder.isTypeSupported(mimeType)) || '';
 };
 
 export function NotesPage() {
   const fileInputRef = useRef(null);
-  const { backendHealth } = useWorkspaceShell();
+  const audioRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const mediaStreamRef = useRef(null);
+  const recordedChunksRef = useRef([]);
+  const recordingNoteIdRef = useRef('');
+  const { user } = useAuth();
+
+  const userId = user?.id || 'web-local';
+  const isGuest = !user;
 
   const [notes, setNotes] = useState([]);
   const [draft, setDraft] = useState(createDraftNote());
   const [selectedNoteId, setSelectedNoteId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedTag, setSelectedTag] = useState('');
   const [aiPrompt, setAiPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const deferredSearchQuery = useDeferredValue(searchQuery);
+  const [isReading, setIsReading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [showAiBar, setShowAiBar] = useState(false);
+  const [isRemoteSearching, setIsRemoteSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
+  const deferredSearch = useDeferredValue(searchQuery);
+
+  const stopReading = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+    }
+    setIsReading(false);
+  };
+
+  const stopRecordingStream = () => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+    }
+  };
+
+  useEffect(() => () => {
+    stopReading();
+    stopRecordingStream();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
+    setIsLoading(true);
 
-    const loadNotes = async () => {
-      setIsLoading(true);
-      try {
-        const backendNotes = await fetchNotes(USER_ID);
+    fetchNotes(userId)
+      .then((items) => {
         if (cancelled) {
           return;
         }
 
-        const nextNotes = backendNotes.map(normalizeNote);
+        const nextNotes = items.map(normalizeNote);
         startTransition(() => {
           setNotes(nextNotes);
-          if (nextNotes[0]) {
-            setSelectedNoteId(nextNotes[0].id);
-            setDraft(nextNotes[0]);
-          } else {
-            const fallbackDraft = createDraftNote();
-            setSelectedNoteId(fallbackDraft.id);
-            setDraft(fallbackDraft);
-          }
+          const first = nextNotes[0] || createDraftNote();
+          setSelectedNoteId(first.id);
+          setDraft(first);
         });
-      } catch {
+      })
+      .catch(() => {
         if (cancelled) {
           return;
         }
@@ -144,82 +211,155 @@ export function NotesPage() {
         const localNotes = readLocalNotes();
         startTransition(() => {
           setNotes(localNotes);
-          if (localNotes[0]) {
-            setSelectedNoteId(localNotes[0].id);
-            setDraft(localNotes[0]);
-          } else {
-            const fallbackDraft = createDraftNote();
-            setSelectedNoteId(fallbackDraft.id);
-            setDraft(fallbackDraft);
-          }
+          const first = localNotes[0] || createDraftNote();
+          setSelectedNoteId(first.id);
+          setDraft(first);
         });
-
-        toast.info('Notes API unavailable. Falling back to browser-local drafts.');
-      } finally {
+        toast.info('Backend unavailable. Using browser storage.');
+      })
+      .finally(() => {
         if (!cancelled) {
           setIsLoading(false);
         }
-      }
-    };
-
-    loadNotes();
+      });
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [userId]);
 
   const filteredNotes = useMemo(() => {
-    const normalizedQuery = deferredSearchQuery.trim().toLowerCase();
-    if (!normalizedQuery) {
-      return notes;
+    const sourceNotes = searchResults.length > 0 || deferredSearch.trim() ? searchResults : notes;
+    const normalizedQuery = deferredSearch.trim().toLowerCase();
+    if (!normalizedQuery && !selectedTag) {
+      return sourceNotes;
     }
 
-    return notes.filter(
+    return sourceNotes.filter(
       (note) =>
-        note.title.toLowerCase().includes(normalizedQuery) ||
-        note.content.toLowerCase().includes(normalizedQuery),
+        (!selectedTag || (note.tags || []).includes(selectedTag)) && (
+          !normalizedQuery ||
+          note.title.toLowerCase().includes(normalizedQuery) ||
+          note.content.toLowerCase().includes(normalizedQuery)
+        ),
     );
-  }, [deferredSearchQuery, notes]);
+  }, [deferredSearch, notes, searchResults, selectedTag]);
+
+  const tagCounts = useMemo(() => buildTagCounts(notes), [notes]);
+
+  const atGuestLimit = isGuest && notes.length >= GUEST_LIMIT;
+
+  useEffect(() => {
+    let cancelled = false;
+    const normalizedQuery = deferredSearch.trim();
+
+    if (!normalizedQuery) {
+      if (!selectedTag) {
+        setSearchResults([]);
+        return undefined;
+      }
+
+      filterNotesByTag(selectedTag, userId)
+        .then((items) => {
+          if (!cancelled) {
+            setSearchResults(items.map(normalizeNote));
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setSearchResults([]);
+          }
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    setIsRemoteSearching(true);
+    searchNotes(normalizedQuery, userId, 40, selectedTag)
+      .then((payload) => {
+        if (cancelled) {
+          return;
+        }
+        const matchedNotes = (payload.matches || []).map((match) => {
+          const existing = notes.find((note) => note.id === match.id);
+          return normalizeNote(existing || {
+            id: match.id,
+            user_id: userId,
+            title: match.title,
+            content: match.excerpt || '',
+            excerpt: match.excerpt || '',
+            tags: match.tags || [],
+          });
+        });
+        setSearchResults(matchedNotes);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSearchResults([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsRemoteSearching(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [deferredSearch, notes, selectedTag, userId]);
 
   const handleSelectNote = (note) => {
     setSelectedNoteId(note.id);
     setDraft(note);
+    setShowAiBar(false);
   };
 
   const handleCreateNote = () => {
+    if (atGuestLimit) {
+      toast.error(`Guest limit reached (${GUEST_LIMIT} notes). Sign in for unlimited notes.`);
+      return;
+    }
+
     const nextDraft = createDraftNote();
     setSelectedNoteId(nextDraft.id);
     setDraft(nextDraft);
+    setShowAiBar(false);
   };
 
   const handleSaveNote = async () => {
     const normalizedDraft = {
       ...draft,
       title: inferTitle(draft.title, draft.content),
-      content: draft.content,
       excerpt: buildExcerpt(draft.content),
       updated_at: new Date().toISOString(),
     };
+
+    if (isGuest && notes.filter((note) => note.id !== draft.id).length >= GUEST_LIMIT) {
+      toast.error(`Guest limit reached (${GUEST_LIMIT} notes). Sign in for unlimited notes.`);
+      return;
+    }
 
     setIsSaving(true);
     try {
       const saved = normalizeNote(
         await saveNote({
           id: normalizedDraft.id,
-          user_id: USER_ID,
+          user_id: userId,
           title: normalizedDraft.title,
           content: normalizedDraft.content,
           source_path: normalizedDraft.source_path,
           is_ai_generated: normalizedDraft.is_ai_generated,
         }),
       );
+
       startTransition(() => {
         setNotes((current) => upsertNotes(current, saved));
         setSelectedNoteId(saved.id);
         setDraft(saved);
       });
-      toast.success('Note saved to SQLite');
+      toast.success('Saved');
     } catch {
       const localSaved = normalizeNote(normalizedDraft);
       const nextNotes = upsertNotes(notes, localSaved);
@@ -229,7 +369,7 @@ export function NotesPage() {
         setSelectedNoteId(localSaved.id);
         setDraft(localSaved);
       });
-      toast.info('Backend unavailable. Saved locally in the browser.');
+      toast.info('Saved locally in the browser.');
     } finally {
       setIsSaving(false);
     }
@@ -241,10 +381,16 @@ export function NotesPage() {
       return;
     }
 
+    if (atGuestLimit) {
+      toast.error(`Guest limit reached (${GUEST_LIMIT} notes). Sign in for unlimited notes.`);
+      event.target.value = '';
+      return;
+    }
+
     const content = await file.text();
 
     try {
-      const saved = normalizeNote(await importMarkdownNote(file.name, content, USER_ID));
+      const saved = normalizeNote(await importMarkdownNote(file.name, content, userId));
       startTransition(() => {
         setNotes((current) => upsertNotes(current, saved));
         setSelectedNoteId(saved.id);
@@ -267,7 +413,7 @@ export function NotesPage() {
         setSelectedNoteId(localSaved.id);
         setDraft(localSaved);
       });
-      toast.info(`Imported ${file.name} locally in the browser`);
+      toast.info(`Imported ${file.name} locally.`);
     } finally {
       event.target.value = '';
     }
@@ -278,258 +424,389 @@ export function NotesPage() {
       return;
     }
 
+    if (atGuestLimit) {
+      toast.error(`Guest limit reached (${GUEST_LIMIT} notes). Sign in for unlimited notes.`);
+      return;
+    }
+
     setIsGenerating(true);
     try {
-      const saved = normalizeNote(await generateAiNote(aiPrompt.trim(), draft.title.trim(), USER_ID));
+      const saved = normalizeNote(await generateAiNote(aiPrompt.trim(), draft.title.trim(), userId));
       startTransition(() => {
         setNotes((current) => upsertNotes(current, saved));
         setSelectedNoteId(saved.id);
         setDraft(saved);
       });
       setAiPrompt('');
-      toast.success('AI draft created from Gemini');
+      setShowAiBar(false);
+      toast.success('AI draft created');
     } catch (error) {
-      const message = error?.response?.data?.detail || error.message || 'Failed to create AI draft';
-      toast.error(message);
+      toast.error(error?.response?.data?.detail || error.message || 'AI draft failed');
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleInsertTemplate = (templateKey) => {
-    setDraft((current) => ({
-      ...current,
-      content: `${current.content}${BLOCK_TEMPLATES[templateKey]}`,
-    }));
+  const handleReadNote = async () => {
+    if (isReading) {
+      stopReading();
+      return;
+    }
+
+    const narration = [draft.title.trim(), draft.content.trim()].filter(Boolean).join('\n\n').trim();
+    if (!narration) {
+      toast.error('Add note content before reading it aloud.');
+      return;
+    }
+
+    setIsReading(true);
+    try {
+      const response = await synthesizeSpeech({
+        text: narration,
+        provider: 'kitten',
+        voice: 'Bruno',
+        speed: 1.0,
+      });
+      const audio = new Audio(resolveApiUrl(response.file_url));
+      audioRef.current = audio;
+      audio.onended = () => {
+        audioRef.current = null;
+        setIsReading(false);
+      };
+      audio.onerror = () => {
+        audioRef.current = null;
+        setIsReading(false);
+        toast.error('Audio playback failed.');
+      };
+      await audio.play();
+    } catch (error) {
+      setIsReading(false);
+      toast.error(error?.response?.data?.detail || error.message || 'Read aloud failed');
+    }
   };
 
-  const noteCountLabel = `${notes.length} note${notes.length === 1 ? '' : 's'}`;
+  const handleWriteNote = async () => {
+    if (isRecording) {
+      mediaRecorderRef.current?.stop();
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia || typeof window.MediaRecorder === 'undefined') {
+      toast.error('This browser cannot record microphone audio.');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = getPreferredRecorderMimeType();
+      const recorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
+
+      mediaStreamRef.current = stream;
+      mediaRecorderRef.current = recorder;
+      recordedChunksRef.current = [];
+      recordingNoteIdRef.current = selectedNoteId || draft.id;
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onerror = () => {
+        stopRecordingStream();
+        mediaRecorderRef.current = null;
+        recordedChunksRef.current = [];
+        setIsRecording(false);
+        toast.error('Microphone recording failed.');
+      };
+
+      recorder.onstop = async () => {
+        const recordedChunks = [...recordedChunksRef.current];
+        const recordedMimeType = recorder.mimeType || mimeType || 'audio/webm';
+
+        stopRecordingStream();
+        mediaRecorderRef.current = null;
+        recordedChunksRef.current = [];
+        setIsRecording(false);
+
+        if (!recordedChunks.length) {
+          toast.error('No audio was captured.');
+          return;
+        }
+
+        setIsTranscribing(true);
+        try {
+          const blob = new Blob(recordedChunks, { type: recordedMimeType });
+          const response = await transcribeSpeech(blob, recordingNoteIdRef.current);
+          const transcript = response.text?.trim() || '';
+          if (!transcript) {
+            toast.error('No speech was detected.');
+            return;
+          }
+
+          setDraft((current) => ({
+            ...current,
+            content: appendTranscript(current.content, transcript),
+          }));
+          toast.success('Transcribed into the current note. Click Save to persist it.');
+        } catch (error) {
+          toast.error(error?.response?.data?.detail || error.message || 'Voice transcription failed');
+        } finally {
+          setIsTranscribing(false);
+        }
+      };
+
+      recorder.start();
+      setIsRecording(true);
+      toast.info('Recording started. Click Write again to stop.');
+    } catch (error) {
+      stopRecordingStream();
+      setIsRecording(false);
+      toast.error(error?.message || 'Microphone permission was denied.');
+    }
+  };
 
   return (
-    <main className="space-y-5">
-      <section className="space-y-4 rounded-[28px] border border-border/70 bg-background/78 p-6 shadow-[var(--shadow-soft)] backdrop-blur-xl sm:p-8">
-        <div className="flex flex-wrap items-center gap-3">
-          <Badge className="bg-primary/12 text-primary hover:bg-primary/12">/notes</Badge>
-          <Badge className="bg-secondary text-secondary-foreground">Notion-style editor</Badge>
-          <Badge className="bg-secondary text-secondary-foreground">Markdown import</Badge>
-          <Badge className="bg-secondary text-secondary-foreground">AI draft</Badge>
+    <div
+      className="flex h-[calc(100vh-3.5rem-2rem)] overflow-hidden rounded-xl border border-border/70 bg-background shadow-sm"
+      style={{ minHeight: 520 }}
+    >
+      <aside className="flex w-64 shrink-0 flex-col border-r border-border/60 bg-card/80">
+        <div className="flex items-center justify-between px-3 pb-2 pt-3">
+          <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+            Pages
+          </span>
+          <button
+            className="rounded p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            onClick={handleCreateNote}
+            title="New page"
+            type="button"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
         </div>
 
-        <div className="space-y-3">
-          <p className="font-display text-sm font-semibold uppercase tracking-[0.24em] text-primary">
-            Notes workspace
-          </p>
-          <h1 className="font-display text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-            A local-first page editor with optional Supabase mirroring
-          </h1>
-          <p className="max-w-3xl text-base leading-7 text-muted-foreground">
-            Notes save to SQLite first, can import markdown files, and can ask Gemini for a
-            structured first draft. If the backend is unavailable, the page falls back to
-            browser-local drafts so editing still works.
-          </p>
+        <div className="relative px-2 pb-1">
+          <Search className="pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            className="h-7 rounded-md bg-secondary/50 pl-8 text-xs"
+            onChange={(event) => setSearchQuery(event.target.value)}
+            placeholder="Search..."
+            value={searchQuery}
+          />
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2 rounded-full border border-border/80 bg-card/90 px-3 py-1.5">
-            <Database className="h-4 w-4 text-primary" />
-            <span>{backendHealth?.notesDatabasePath || 'SQLite local store'}</span>
+        {Object.keys(tagCounts).length > 0 ? (
+          <div className="border-b border-border/60 px-2 pb-2 pt-1">
+            <div className="mb-1 flex items-center justify-between text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+              <span>Facets</span>
+              {selectedTag ? (
+                <button className="text-[10px] normal-case text-primary" onClick={() => setSelectedTag('')} type="button">
+                  Clear
+                </button>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {Object.entries(tagCounts).map(([tag, count]) => (
+                <button key={tag} onClick={() => setSelectedTag((current) => current === tag ? '' : tag)} type="button">
+                  <Badge variant={selectedTag === tag ? 'default' : 'secondary'} className="gap-1 capitalize">
+                    {tag}
+                    <span className="opacity-70">{count}</span>
+                  </Badge>
+                </button>
+              ))}
+            </div>
           </div>
-          <div className="flex items-center gap-2 rounded-full border border-border/80 bg-card/90 px-3 py-1.5">
-            {backendHealth?.status === 'ok' ? (
-              <FileText className="h-4 w-4 text-primary" />
-            ) : (
-              <CloudOff className="h-4 w-4 text-destructive" />
-            )}
-            <span>{backendHealth?.status === 'ok' ? 'Backend connected' : 'Browser-local fallback'}</span>
+        ) : null}
+
+        {isGuest ? (
+          <div className="mx-2 mb-1 mt-1 flex items-center justify-between rounded-md bg-amber-50 px-2.5 py-1.5 text-xs text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+            <span>
+              {notes.length}/{GUEST_LIMIT} notes
+            </span>
+            <NavLink
+              className="flex items-center gap-0.5 font-medium underline underline-offset-2"
+              to="/login"
+            >
+              <LogIn className="h-3 w-3" />
+              Sign in
+            </NavLink>
           </div>
-        </div>
-      </section>
+        ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)]">
-        <Card className="rounded-[28px] border-border/80 bg-card/95 shadow-lg">
-          <CardHeader className="space-y-4 border-b border-border/70 pb-4">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <CardTitle className="font-display text-xl">Pages</CardTitle>
-                <CardDescription>{noteCountLabel}</CardDescription>
-              </div>
-              <Badge className="bg-accent text-accent-foreground">Guest mode</Badge>
+        <div className="flex-1 overflow-y-auto py-1">
+          {isLoading ? (
+            <div className="flex items-center gap-2 px-3 py-4 text-xs text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Loading...
             </div>
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
-              <Button className="rounded-xl" onClick={handleCreateNote}>
-                <Plus className="mr-2 h-4 w-4" />
-                New page
-              </Button>
-              <Button className="rounded-xl" onClick={() => fileInputRef.current?.click()} variant="outline">
-                <FileUp className="mr-2 h-4 w-4" />
-                Import .md
-              </Button>
+          ) : isRemoteSearching ? (
+            <div className="flex items-center gap-2 px-3 py-4 text-xs text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Searching notes...
             </div>
-            <input
-              accept=".md,text/markdown"
-              className="hidden"
-              onChange={handleImportFile}
-              ref={fileInputRef}
-              type="file"
-            />
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                className="h-11 rounded-xl border-input bg-secondary/35 pl-9"
-                onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search pages..."
-                value={searchQuery}
-              />
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <ScrollArea className="h-[620px]">
-              <div className="space-y-2 p-3">
-                {isLoading ? (
-                  <div className="space-y-3 p-3 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <p>Loading notes…</p>
-                  </div>
-                ) : filteredNotes.length > 0 ? (
-                  filteredNotes.map((note) => (
-                    <button
-                      className={[
-                        'w-full rounded-2xl border px-4 py-3 text-left transition-colors',
-                        selectedNoteId === note.id
-                          ? 'border-primary/30 bg-primary/10'
-                          : 'border-border/70 bg-background/60 hover:bg-secondary/60',
-                      ].join(' ')}
-                      key={note.id}
-                      onClick={() => handleSelectNote(note)}
-                      type="button"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold text-foreground">{note.title || 'Untitled note'}</p>
-                          <p className="mt-1 text-xs leading-5 text-muted-foreground">{note.excerpt}</p>
-                        </div>
-                        {note.is_ai_generated ? (
-                          <Badge className="bg-primary/12 text-primary hover:bg-primary/12">AI</Badge>
-                        ) : null}
-                      </div>
-                      <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{note.source_path || 'Manual page'}</span>
-                        <span>{new Date(note.updated_at).toLocaleDateString()}</span>
-                      </div>
-                    </button>
-                  ))
-                ) : (
-                  <div className="space-y-3 p-5 text-sm text-muted-foreground">
-                    <BookText className="h-5 w-5 text-primary" />
-                    <p>No pages yet. Create a new page, import a markdown file, or ask Gemini for a draft.</p>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-[28px] border-border/80 bg-card/97 shadow-lg">
-          <CardHeader className="space-y-4 border-b border-border/70 pb-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <CardTitle className="font-display text-2xl">{draft.title || 'Untitled page'}</CardTitle>
-                <CardDescription>
-                  {draft.source_path || 'Local-first page'}
-                  {draft.is_ai_generated ? ' • AI generated' : ''}
-                </CardDescription>
-              </div>
-              <Button className="rounded-xl" disabled={isSaving} onClick={handleSaveNote}>
-                {isSaving ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="mr-2 h-4 w-4" />
-                )}
-                {isSaving ? 'Saving...' : 'Save page'}
-              </Button>
-            </div>
-
-            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
-              <Input
-                className="h-11 rounded-xl border-input bg-secondary/35"
-                onChange={(event) => setAiPrompt(event.target.value)}
-                placeholder="Ask Gemini to draft meeting notes, research briefs, or summaries..."
-                value={aiPrompt}
-              />
-              <Button
-                className="rounded-xl"
-                disabled={isGenerating || !aiPrompt.trim()}
-                onClick={handleGenerateAiNote}
+          ) : filteredNotes.length > 0 ? (
+            filteredNotes.map((note) => (
+              <div
+                className={[
+                  'group mx-1 flex cursor-pointer select-none items-center gap-1 rounded-md px-2 py-1.5 transition-colors',
+                  selectedNoteId === note.id
+                    ? 'bg-secondary text-foreground'
+                    : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+                ].join(' ')}
+                key={note.id}
+                onClick={() => handleSelectNote(note)}
               >
-                {isGenerating ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Bot className="mr-2 h-4 w-4" />
-                )}
-                {isGenerating ? 'Drafting...' : 'Generate AI note'}
-              </Button>
-            </div>
+                <ChevronRight className="h-3 w-3 shrink-0 opacity-40" />
+                <div className="min-w-0 flex-1">
+                  <span className="block truncate text-sm">{note.title || 'Untitled'}</span>
+                  {note.tags?.length ? (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {note.tags.slice(0, 3).map((tag) => (
+                        <Badge key={tag} variant="outline" className="px-1.5 py-0 text-[10px] capitalize">
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="px-3 py-4 text-xs text-muted-foreground">
+              {selectedTag || deferredSearch ? 'No notes match the current filters.' : 'No pages yet. Click + to create one.'}
+            </p>
+          )}
+        </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Button className="rounded-xl" onClick={() => handleInsertTemplate('heading')} size="sm" variant="outline">
-                Heading
-              </Button>
-              <Button className="rounded-xl" onClick={() => handleInsertTemplate('checklist')} size="sm" variant="outline">
-                Checklist
-              </Button>
-              <Button className="rounded-xl" onClick={() => handleInsertTemplate('meeting')} size="sm" variant="outline">
-                Meeting template
-              </Button>
-              <Badge className="bg-secondary text-secondary-foreground">
-                Slash-style blocks via quick inserts
-              </Badge>
-            </div>
-          </CardHeader>
+        <div className="flex flex-col gap-1 border-t border-border/60 px-2 py-2">
+          <button
+            className="flex items-center gap-2 rounded px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
+            onClick={() => fileInputRef.current?.click()}
+            type="button"
+          >
+            <FileUp className="h-3.5 w-3.5" />
+            Import .md
+          </button>
+          <button
+            className="flex items-center gap-2 rounded px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"
+            onClick={() => setShowAiBar((value) => !value)}
+            type="button"
+          >
+            <Bot className="h-3.5 w-3.5" />
+            AI Draft
+          </button>
+          <input
+            accept=".md,text/markdown"
+            className="hidden"
+            onChange={handleImportFile}
+            ref={fileInputRef}
+            type="file"
+          />
+        </div>
+      </aside>
 
-          <CardContent className="space-y-5 p-5">
+      <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-6 py-2">
+          <span className="text-xs text-muted-foreground">
+            {draft.updated_at ? `Edited ${new Date(draft.updated_at).toLocaleDateString()}` : ''}
+            {draft.is_ai_generated ? ' • AI' : ''}
+            {draft.source_path ? ` • ${draft.source_path}` : ''}
+          </span>
+          <div className="flex items-center gap-2">
+            <Button
+              className="h-7 text-xs text-muted-foreground"
+              disabled={isRecording || isTranscribing}
+              onClick={handleReadNote}
+              size="sm"
+              variant="ghost"
+            >
+              {isReading ? <Square className="mr-1 h-3.5 w-3.5" /> : <Volume2 className="mr-1 h-3.5 w-3.5" />}
+              {isReading ? 'Stop' : 'Read'}
+            </Button>
+            <Button
+              className="h-7 text-xs text-muted-foreground"
+              disabled={isReading || isTranscribing}
+              onClick={handleWriteNote}
+              size="sm"
+              variant="ghost"
+            >
+              {isRecording ? <Square className="mr-1 h-3.5 w-3.5" /> : isTranscribing ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Mic className="mr-1 h-3.5 w-3.5" />}
+              {isRecording ? 'Stop' : isTranscribing ? 'Writing...' : 'Write'}
+            </Button>
+            <Button
+              className="h-7 text-xs text-muted-foreground"
+              onClick={() => setShowAiBar((value) => !value)}
+              size="sm"
+              variant="ghost"
+            >
+              <Bot className="mr-1 h-3.5 w-3.5" />
+              Ask AI
+            </Button>
+            <Button className="h-7 text-xs" disabled={isSaving} onClick={handleSaveNote} size="sm">
+              {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Save'}
+            </Button>
+          </div>
+        </div>
+
+        {showAiBar ? (
+          <div className="flex shrink-0 items-center gap-2 border-b border-border/60 bg-secondary/30 px-6 py-2">
+            <Bot className="h-4 w-4 shrink-0 text-muted-foreground" />
             <Input
-              className="h-14 rounded-2xl border-none bg-transparent px-0 text-3xl font-semibold shadow-none focus-visible:ring-0"
+              className="h-7 flex-1 border-0 bg-transparent px-1 text-sm shadow-none focus-visible:ring-0"
+              onChange={(event) => setAiPrompt(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  handleGenerateAiNote();
+                }
+              }}
+              placeholder="Ask Gemini to draft meeting notes, summaries, or research briefs..."
+              value={aiPrompt}
+            />
+            <Button
+              className="h-7 shrink-0 text-xs"
+              disabled={isGenerating || !aiPrompt.trim()}
+              onClick={handleGenerateAiNote}
+              size="sm"
+            >
+              {isGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Generate'}
+            </Button>
+            <button
+              className="text-muted-foreground hover:text-foreground"
+              onClick={() => setShowAiBar(false)}
+              type="button"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
+          </div>
+        ) : null}
+
+        <div className="mx-auto flex w-full max-w-3xl flex-1 overflow-y-auto px-12 py-8">
+          <div className="w-full">
+            {draft.tags?.length ? (
+              <div className="mb-4 flex flex-wrap gap-2">
+                {draft.tags.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="capitalize">{tag}</Badge>
+                ))}
+              </div>
+            ) : null}
+            <input
+              className="mb-4 w-full bg-transparent text-4xl font-bold text-foreground outline-none placeholder:text-muted-foreground/50"
               onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))}
               placeholder="Untitled"
               value={draft.title}
             />
-
             <Textarea
-              className="notes-editor min-h-[560px] rounded-[24px] border border-border/70 bg-secondary/20 p-5 text-[15px] leading-7"
+              className="min-h-[60vh] w-full resize-none border-0 bg-transparent p-0 text-base leading-7 text-foreground shadow-none placeholder:text-muted-foreground/40 focus-visible:ring-0"
               onChange={(event) => setDraft((current) => ({ ...current, content: event.target.value }))}
-              placeholder="Type '/' for your own shortcuts, write in markdown, or import an existing .md page."
+              placeholder="Start writing, or ask AI above..."
               value={draft.content}
             />
-
-            <div className="grid gap-3 rounded-[24px] border border-border/70 bg-secondary/30 p-4 text-sm text-muted-foreground sm:grid-cols-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Source</p>
-                <p className="mt-1 break-all">{draft.source_path || 'Manual page'}</p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Updated</p>
-                <p className="mt-1">{new Date(draft.updated_at).toLocaleString()}</p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Access</p>
-                <p className="mt-1">No login required until you choose to add auth.</p>
-              </div>
-            </div>
-
-            <div className="rounded-[24px] border border-border/70 bg-background/70 p-4">
-              <div className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
-                <Sparkles className="h-4 w-4 text-primary" />
-                AI note help
-              </div>
-              <p className="text-sm leading-6 text-muted-foreground">
-                Ask for research summaries, meeting briefs, architecture notes, or action-item
-                lists. If Gemini is unavailable, the editor still works locally and you can save
-                drafts without leaving the page.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
-    </main>
+    </div>
   );
 }

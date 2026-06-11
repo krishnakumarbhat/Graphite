@@ -8,7 +8,7 @@ Local-first notes + workflows application built as a mobile-first Expo app with 
 - Cloud DB: Supabase (PostgreSQL + pgvector)
 - Auth: Supabase Auth (email/password)
 - Backend API: Flask
-- AI workflow engine: Gemini 1.5 Flash
+- AI workflow engine: Gemini 3.5 Flash with 3.1 Flash fallback
 - Local STT target: Whisper Tiny (placeholder wired in Note Editor)
 
 ## Monorepo layout
@@ -108,6 +108,25 @@ Validate the backend and model workspace:
 ```bash
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/python -m pytest tests/test_backend_server.py tests/test_edge_model_assets.py
 ```
+
+## Docker and Render
+
+Build the image:
+```bash
+docker build -t graphite .
+```
+
+Run it locally against your existing Supabase project:
+```bash
+docker run --rm -p 8001:8001 --env-file backend/.env graphite
+```
+
+Render setup notes:
+- Deploy from the repo root with the included `Dockerfile`.
+- Set `SUPABASE_URL` plus either `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_PUBLIC_KEY`.
+- Set `GEMINI_API_KEY` and keep `GEMINI_MODEL=gemini-3.5-flash` with `GEMINI_FALLBACK_MODEL=gemini-3.1-flash`.
+- Leave `GRAPHITE_MODEL_REPO` on `krishnah27/graphite` unless you move the Hugging Face artifacts.
+- Render provides `PORT`; the container already binds to it.
 
 ## Open-source docs
 - `CONTRIBUTING.md`

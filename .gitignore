@@ -1,17 +1,62 @@
-# Local secrets
+# Environment files
 .env
-backend/.env
+.env.*
+!.env.example
 
-# Python environments and caches
-.venv/
-**/__pycache__/
+# Python
+__pycache__/
 *.py[cod]
-.pytest_cache/
-.ruff_cache/
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+*.pyc
+.Python
 
-# Local runtime artifacts
+# Node / Frontend
+node_modules/
+frontend/build/
+frontend/.env.local
+mobile/node_modules/
+mobile/.expo/
+
+# SQLite databases
 backend/data/*.sqlite3
-backend/data/*.sqlite3-*
-test_reports/
+backend/data/*.db
+
+# Audio / TTS output
+backend/data/audio/
+
+# Model cache
+backend/data/model-cache/
+backend/data/models/
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+bin/*.apk
+bin/*.tar.gz
+bin/*.zip
+
+# Test artifacts
+.pytest_cache/
 .coverage
-coverage.xml
+htmlcov/

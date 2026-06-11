@@ -1,0 +1,48 @@
+{
+  "eval_set_id": "graphite_note_search_test",
+  "name": "Graphite Note Search Test",
+  "description": "Single-session ADK test file for note search behavior.",
+  "eval_cases": [
+    {
+      "eval_id": "note_search_test_case",
+      "conversation": [
+        {
+          "invocation_id": "graphite-note-search-001",
+          "user_content": {
+            "parts": [
+              {
+                "text": "Search my notes for architecture decisions"
+              }
+            ],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [
+              {
+                "text": "I found notes related to architecture decisions."
+              }
+            ],
+            "role": "model"
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {
+                "name": "search_notes",
+                "args": {
+                  "query": "architecture decisions",
+                  "user_id": "web-local"
+                }
+              }
+            ],
+            "intermediate_responses": []
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "graphite",
+        "user_id": "web-local",
+        "state": {}
+      }
+    }
+  ]
+}

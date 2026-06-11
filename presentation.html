@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Graphite Demo Presentation</title>
+<style>
+  :root {
+    --bg: #f5f1e8;
+    --panel: #fffaf1;
+    --ink: #14213d;
+    --muted: #5f6b7a;
+    --line: #d7cdbd;
+    --accent: #0f766e;
+    --accent-strong: #115e59;
+    --accent-soft: #d7f3ee;
+    --warm: #c96f32;
+    --warm-soft: #f8e2d2;
+    --alert: #7f1d1d;
+    --shadow: 0 18px 44px rgba(20, 33, 61, 0.12);
+    --radius: 22px;
+    --mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+    --sans: "IBM Plex Sans", "Segoe UI", sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    background:
+      radial-gradient(circle at top left, rgba(15, 118, 110, 0.08), transparent 22%),
+      radial-gradient(circle at top right, rgba(201, 111, 50, 0.1), transparent 26%),
+      var(--bg);
+    color: var(--ink);
+  }
+
+  a { color: inherit; }
+
+  .hero {
+    padding: 52px 28px 36px;
+  }
+
+  .hero-shell {
+    max-width: 1220px;
+    margin: 0 auto;
+    background: linear-gradient(135deg, rgba(20, 33, 61, 0.96), rgba(17, 94, 89, 0.92));
+    color: #fdfbf6;
+    border-radius: 30px;
+    padding: 34px;
+    box-shadow: 0 32px 90px rgba(20, 33, 61, 0.28);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-shell::after {
+    content: "";
+    position: absolute;
+    inset: auto -40px -60px auto;
+    width: 320px;
+    height: 320px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.16), transparent 64%);
+    pointer-events: none;
+  }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.82);
+  }
+
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 0.9fr;
+    gap: 28px;
+    margin-top: 24px;
+  }
+
+  h1 {
+    margin: 0 0 14px;
+    font-size: clamp(2.4rem, 5vw, 4.5rem);
+    line-height: 0.96;
+    letter-spacing: -0.04em;
+  }
+
+  .hero-copy p,
+  .panel-subtext,
+  .stage-copy,
+  .footer-copy,
+  .list li,
+  td,
+  th {
+    line-height: 1.55;
+  }
+
+  .hero-copy p {
+    max-width: 60ch;
+    margin: 0 0 20px;
+    color: rgba(253, 251, 246, 0.85);
+    font-size: 1.02rem;
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .chip,
+  .scenario-button,
+  .tool-button,
+  .node,
+  .segment-button {
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font: inherit;
+    cursor: pointer;
+    transition: transform 160ms ease, background 160ms ease, border-color 160ms ease, color 160ms ease;
+  }
+
+  .chip {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    padding: 10px 14px;
+    text-decoration: none;
+  }
+
+  .chip:hover,
+  .scenario-button:hover,
+  .tool-button:hover,
+  .node:hover,
+  .segment-button:hover {
+    transform: translateY(-1px);
+  }
+
+  .hero-status {
+    display: grid;
+    gap: 14px;
+    align-content: start;
+  }
+
+  .status-card,
+  .panel,
+  .metric,
+  .timeline-item,
+  .story-card,
+  .command-card,
+  .comparison-card,
+  .list-card,
+  .table-shell {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+
+  .status-card {
+    padding: 18px;
+    color: var(--ink);
+  }
+
+  .status-card strong {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+
+  .status-card span {
+    font-size: 1.45rem;
+    font-weight: 700;
+  }
+
+  .shell {
+    max-width: 1220px;
+    margin: 0 auto;
+    padding: 0 28px 80px;
+  }
+
+  .section {
+    margin-top: 30px;
+  }
+
+  .section-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 16px;
+  }
+
+  .section-header h2 {
+    margin: 0;
+    font-size: 1.65rem;
+    letter-spacing: -0.03em;
+  }
+
+  .panel-subtext {
+    max-width: 64ch;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  .scenario-switch {
+    display: inline-flex;
+    gap: 8px;
+    background: rgba(20, 33, 61, 0.06);
+    padding: 8px;
+    border-radius: 999px;
+  }
+
+  .scenario-button,
+  .segment-button {
+    padding: 11px 16px;
+    background: transparent;
+    color: var(--muted);
+    border-color: transparent;
+  }
+
+  .scenario-button.is-active,
+  .segment-button.is-active {
+    background: var(--accent);
+    color: #fff;
+    border-color: rgba(15, 118, 110, 0.35);
+  }
+
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .metric {
+    padding: 18px;
+  }
+
+  .metric-label {
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.05em;
+    margin-bottom: 8px;
+  }
+
+  .metric-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: var(--accent-strong);
+    background: var(--accent-soft);
+    padding: 5px 10px;
+    border-radius: 999px;
+  }
+
+  .two-column,
+  .three-column {
+    display: grid;
+    gap: 18px;
+  }
+
+  .two-column {
+    grid-template-columns: minmax(0, 1.1fr) minmax(300px, 0.9fr);
+  }
+
+  .three-column {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .panel {
+    padding: 20px;
+  }
+
+  .panel h3,
+  .list-card h3,
+  .story-card h3,
+  .command-card h3,
+  .comparison-card h3 {
+    margin: 0 0 12px;
+    font-size: 1.1rem;
+  }
+
+  .bar-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .bar-row {
+    display: grid;
+    grid-template-columns: 140px minmax(0, 1fr) 74px;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .bar-label {
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+
+  .bar-track {
+    height: 16px;
+    background: rgba(20, 33, 61, 0.08);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--warm), var(--accent));
+    transition: width 220ms ease;
+  }
+
+  .bar-value {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    color: var(--ink);
+  }
+
+  .story-card {
+    padding: 22px;
+    display: grid;
+    gap: 12px;
+  }
+
+  .story-card p,
+  .command-card p,
+  .comparison-card p,
+  .list-card p,
+  .timeline-item p {
+    color: var(--muted);
+    margin: 0;
+  }
+
+  .diagram-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+    gap: 18px;
+  }
+
+  .diagram {
+    position: relative;
+    padding: 26px;
+    background: linear-gradient(180deg, rgba(20, 33, 61, 0.03), rgba(15, 118, 110, 0.06));
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .diagram-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 10px;
+    align-items: center;
+  }
+
+  .node {
+    min-height: 90px;
+    padding: 14px;
+    border-radius: 20px;
+    border-color: rgba(20, 33, 61, 0.12);
+    background: rgba(255, 250, 241, 0.95);
+    text-align: left;
+    color: var(--ink);
+  }
+
+  .node strong,
+  .tool-button strong {
+    display: block;
+    font-size: 0.95rem;
+    margin-bottom: 8px;
+  }
+
+  .node span,
+  .tool-button span {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+
+  .node.is-active,
+  .tool-button.is-active {
+    border-color: rgba(15, 118, 110, 0.5);
+    background: #ffffff;
+    box-shadow: 0 12px 30px rgba(15, 118, 110, 0.15);
+  }
+
+  .arrow {
+    height: 2px;
+    background: linear-gradient(90deg, rgba(20, 33, 61, 0.18), rgba(15, 118, 110, 0.85));
+    position: relative;
+  }
+
+  .arrow::after {
+    content: "";
+    position: absolute;
+    right: -1px;
+    top: -4px;
+    border-left: 8px solid var(--accent);
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+  }
+
+  .tool-lane {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px dashed rgba(20, 33, 61, 0.18);
+  }
+
+  .tool-lane h3 {
+    margin: 0 0 12px;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+
+  .tool-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .tool-button {
+    padding: 14px;
+    border-radius: 18px;
+    text-align: left;
+    background: rgba(255, 250, 241, 0.82);
+    border-color: rgba(20, 33, 61, 0.12);
+    color: var(--ink);
+  }
+
+  .detail-panel {
+    padding: 22px;
+  }
+
+  .detail-kicker {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--warm);
+    margin-bottom: 10px;
+  }
+
+  .detail-panel h3 {
+    margin: 0 0 12px;
+    font-size: 1.3rem;
+  }
+
+  .detail-panel p {
+    color: var(--muted);
+    margin: 0 0 14px;
+  }
+
+  .detail-list {
+    display: grid;
+    gap: 10px;
+  }
+
+  .detail-item {
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: rgba(20, 33, 61, 0.05);
+    color: var(--ink);
+  }
+
+  .detail-item strong {
+    display: block;
+    font-size: 0.82rem;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+
+  .timeline {
+    display: grid;
+    gap: 12px;
+  }
+
+  .timeline-item {
+    padding: 18px;
+  }
+
+  .timeline-step {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+
+  .table-shell {
+    overflow: hidden;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    text-align: left;
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(20, 33, 61, 0.08);
+    vertical-align: top;
+  }
+
+  th {
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--muted);
+    background: rgba(20, 33, 61, 0.04);
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 11px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+  }
+
+  .pill.good {
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+  }
+
+  .pill.warn {
+    background: var(--warm-soft);
+    color: var(--warm);
+  }
+
+  .list {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--muted);
+  }
+
+  .command-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .command-card {
+    padding: 20px;
+  }
+
+  pre {
+    margin: 14px 0 0;
+    padding: 14px;
+    border-radius: 16px;
+    background: #111827;
+    color: #f8fafc;
+    overflow: auto;
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    line-height: 1.6;
+  }
+
+  .footer-copy {
+    margin-top: 24px;
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+
+  @media (max-width: 1100px) {
+    .hero-grid,
+    .two-column,
+    .diagram-shell,
+    .command-grid,
+    .metric-grid,
+    .three-column {
+      grid-template-columns: 1fr;
+    }
+
+    .tool-grid,
+    .diagram-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .arrow {
+      height: 28px;
+      width: 2px;
+      margin: 0 auto;
+    }
+
+    .arrow::after {
+      left: -4px;
+      right: auto;
+      top: auto;
+      bottom: -1px;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-top: 8px solid var(--accent);
+      border-bottom: 0;
+    }
+
+    .bar-row {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .hero,
+    .shell {
+      padding-left: 16px;
+      padding-right: 16px;
+    }
+
+    .hero-shell {
+      padding: 22px;
+    }
+  }
+</style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-shell">
+      <div class="eyebrow">Graphite demo deck · Altimate-optimized data pipeline</div>
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <h1>Graphite now behaves like a research system, not just a note pad.</h1>
+          <p>
+            This presentation shows how Graphite moved from local note storage and blocking report generation
+            to a tuned pipeline with persisted tags, hybrid reranking, Brave-backed live context, streamed SSE responses,
+            and Altimate-style schema, lineage, FinOps, and observability controls.
+          </p>
+          <div class="hero-actions">
+            <a class="chip" href="#metrics">See the metrics</a>
+            <a class="chip" href="#architecture">Open the architecture view</a>
+            <a class="chip" href="#demo-script">Use the live demo script</a>
+          </div>
+        </div>
+        <div class="hero-status">
+          <div class="status-card">
+            <strong>What shipped</strong>
+            <span>HNSW path, Brave, SSE, tags, hybrid rerank</span>
+          </div>
+          <div class="status-card">
+            <strong>Optimization layer</strong>
+            <span>Schema + Lineage + FinOps + Metrics</span>
+          </div>
+          <div class="status-card">
+            <strong>Live backend snapshot</strong>
+            <span id="live-backend-status">Demo mode</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="section" id="metrics">
+      <div class="section-header">
+        <div>
+          <h2>Before vs optimized</h2>
+          <p class="panel-subtext">
+            Toggle the scenario to compare the old Graphite flow with the current optimized build.
+            The numbers combine current in-repo instrumentation with the migration envelope for pgvector HNSW.
+          </p>
+        </div>
+        <div class="scenario-switch" role="tablist" aria-label="Comparison mode">
+          <button class="scenario-button is-active" data-scenario="baseline" type="button">Baseline</button>
+          <button class="scenario-button" data-scenario="optimized" type="button">Optimized</button>
+        </div>
+      </div>
+
+      <div class="metric-grid" id="metric-grid"></div>
+    </section>
+
+    <section class="section two-column">
+      <div class="panel comparison-card">
+        <h3>Performance graph</h3>
+        <p class="panel-subtext">Latency, quality, and coverage move together once Altimate makes the pipeline observable.</p>
+        <div class="bar-list" id="comparison-bars"></div>
+      </div>
+
+      <div class="panel comparison-card">
+        <h3>Why the curve improves</h3>
+        <div class="story-card" style="padding:0; box-shadow:none; border:0; background:transparent;">
+          <div>
+            <div class="pill good" id="delta-pill">Precision@5 +8 pts</div>
+          </div>
+          <p id="scenario-summary"></p>
+          <div class="detail-list" id="scenario-highlights"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="architecture">
+      <div class="section-header">
+        <div>
+          <h2>Architecture diagram</h2>
+          <p class="panel-subtext">
+            Click a stage or an Altimate tool. The panel on the right explains how that stage works and what changed.
+          </p>
+        </div>
+      </div>
+
+      <div class="diagram-shell">
+        <div class="diagram">
+          <div class="diagram-grid">
+            <button class="node is-active" data-node="workspace" type="button"><strong>React workspace</strong><span>Notes, research, TTS, STT, and facet controls.</span></button>
+            <div class="arrow"></div>
+            <button class="node" data-node="api" type="button"><strong>Flask API</strong><span>Routes for notes, search, deep research, stream, and Altimate APIs.</span></button>
+            <div class="arrow"></div>
+            <button class="node" data-node="retrieval" type="button"><strong>Retrieval core</strong><span>Embeddings, persistent tags, hybrid rerank, pgvector or SQLite fallback.</span></button>
+            <div class="arrow"></div>
+            <button class="node" data-node="generation" type="button"><strong>Report generation</strong><span>Plan, write, stream chunks, estimate cost, optionally persist the brief.</span></button>
+          </div>
+
+          <div class="tool-lane">
+            <h3>Altimate optimization lane</h3>
+            <div class="tool-grid">
+              <button class="tool-button" data-node="schema" type="button"><strong>Schema validation</strong><span>Flags missing tables, orphan embeddings, and coverage gaps before search quality drops.</span></button>
+              <button class="tool-button" data-node="lineage" type="button"><strong>Lineage trace</strong><span>Connects note → chunk → embedding → ranked source → final report.</span></button>
+              <button class="tool-button" data-node="finops" type="button"><strong>FinOps guardrails</strong><span>Tracks token usage and keeps report costs visible per query.</span></button>
+              <button class="tool-button" data-node="observability" type="button"><strong>Metrics and trace</strong><span>Shows embedding, ranking, LLM, and total latency for every research run.</span></button>
+            </div>
+          </div>
+        </div>
+
+        <aside class="panel detail-panel">
+          <div class="detail-kicker" id="detail-kicker">Pipeline stage</div>
+          <h3 id="detail-title">React workspace</h3>
+          <p id="detail-copy">The frontend now exposes streamed research, pipeline metrics, live web sources, and tag facets instead of hiding those capabilities behind backend-only routes.</p>
+          <div class="detail-list" id="detail-metrics"></div>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section three-column">
+      <div class="story-card">
+        <h3>What changed in search</h3>
+        <p>Graphite now stores tags persistently, exposes semantic note search, and reranks the top window with a cross-rerank stage instead of stopping at lexical or embedding-only ranking.</p>
+        <ul class="list">
+          <li>New `note_tags` and `tags` tables in local SQLite.</li>
+          <li>`/api/notes/search` exposes ranked matches with score breakdowns.</li>
+          <li>ReAct note search now uses the same retrieval path as the product.</li>
+        </ul>
+      </div>
+      <div class="story-card">
+        <h3>What changed in research</h3>
+        <p>The research page is no longer a single blocking POST. It now consumes an SSE stream with progress, plan blocks, report chunks, and pipeline metrics.</p>
+        <ul class="list">
+          <li>Brave is the primary web provider, with DuckDuckGo fallback.</li>
+          <li>Chunked report updates reduce perceived latency.</li>
+          <li>Altimate metrics attach cost, lineage, and latency to each run.</li>
+        </ul>
+      </div>
+      <div class="story-card">
+        <h3>Why Altimate matters</h3>
+        <p>Altimate’s value here is not cosmetic. It gives the team control over the pipeline’s reliability, explainability, and cost at the exact places where RAG systems usually become opaque.</p>
+        <ul class="list">
+          <li>Coverage gaps become measurable before they degrade answers.</li>
+          <li>Lineage makes every report traceable to ranked evidence.</li>
+          <li>FinOps keeps token usage small enough to scale safely.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section two-column">
+      <div class="table-shell">
+        <table>
+          <thead>
+            <tr>
+              <th>Shipped feature</th>
+              <th>Technical effect</th>
+              <th>User-facing impact</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>pgvector HNSW path</td>
+              <td>Approximate nearest-neighbor search over `note_embeddings` and `memory_vectors`.</td>
+              <td>Lower retrieval latency and a realistic path to larger note corpora.</td>
+            </tr>
+            <tr>
+              <td>Brave-first live search</td>
+              <td>Primary structured web search with DuckDuckGo fallback and provider reporting.</td>
+              <td>Research can cite fresh external context instead of relying only on saved notes.</td>
+            </tr>
+            <tr>
+              <td>SSE research streaming</td>
+              <td>Progress, plan, chunk, metrics, sources, and result events over one request.</td>
+              <td>Users see work happen before the whole report is finished.</td>
+            </tr>
+            <tr>
+              <td>Persistent auto-tagging</td>
+              <td>Stored tags with backend filters and visible note facets.</td>
+              <td>Stocks, ML, career, and related clusters are browsable instead of hidden inside note text.</td>
+            </tr>
+            <tr>
+              <td>Hybrid reranking</td>
+              <td>Lexical + semantic + cross-rerank scoring on the top candidate window.</td>
+              <td>Better top-of-list source quality, especially for ambiguous queries.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="panel list-card">
+        <h3>Altimate optimization map</h3>
+        <p>These are the levers Altimate gives the team to keep the Graphite pipeline fast, testable, and cheap.</p>
+        <div class="timeline">
+          <div class="timeline-item"><div class="timeline-step">1</div><h3>Schema tools</h3><p>Stop silent drift by catching missing tables, unindexed notes, and orphan embeddings before retrieval quality drops.</p></div>
+          <div class="timeline-item"><div class="timeline-step">2</div><h3>Lineage tools</h3><p>Trace every research brief back through the chunks and ranked sources that produced it.</p></div>
+          <div class="timeline-item"><div class="timeline-step">3</div><h3>FinOps tools</h3><p>Expose token and model costs per report so product teams can optimize prompts and chunk sizes with evidence.</p></div>
+          <div class="timeline-item"><div class="timeline-step">4</div><h3>Metrics tools</h3><p>Turn latency into a stage-by-stage budget: embedding, ranking, LLM, and total.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="demo-script">
+      <div class="section-header">
+        <div>
+          <h2>Demo script</h2>
+          <p class="panel-subtext">Use this flow to show the product, the pipeline, and the optimization story in under five minutes.</p>
+        </div>
+      </div>
+
+      <div class="command-grid">
+        <div class="command-card">
+          <h3>1. Open the workspace</h3>
+          <p>Show tags on notes and search for a concept that spans multiple notes.</p>
+          <pre>Open Notes → click a facet → search "architecture decisions"</pre>
+        </div>
+        <div class="command-card">
+          <h3>2. Run hybrid research</h3>
+          <p>Use the research lab with the hybrid mode so the audience sees web context, plan generation, and stream progress.</p>
+          <pre>Research Lab → mode: Hybrid + cross rerank → run query</pre>
+        </div>
+        <div class="command-card">
+          <h3>3. Explain the optimization layer</h3>
+          <p>Use the diagram to show how Altimate validates schema, traces lineage, and keeps query cost visible.</p>
+          <pre>Presentation → Architecture diagram → click Schema / Lineage / FinOps / Metrics</pre>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <div>
+          <h2>Run commands</h2>
+          <p class="panel-subtext">These are the commands needed to bring up the backend and inspect the presentation route.</p>
+        </div>
+      </div>
+      <div class="command-grid">
+        <div class="command-card">
+          <h3>Backend</h3>
+          <p>Run the Flask server and expose both the SPA and the presentation route.</p>
+          <pre>PYTHONPATH=backend python3 backend/server.py</pre>
+        </div>
+        <div class="command-card">
+          <h3>Presentation route</h3>
+          <p>Open the standalone presentation once the backend is up.</p>
+          <pre>http://127.0.0.1:8001/presentation</pre>
+        </div>
+        <div class="command-card">
+          <h3>Health snapshot</h3>
+          <p>These Altimate endpoints back the live status strip when available.</p>
+          <pre>/api/health
+/api/altimate/metrics
+/api/altimate/schema</pre>
+        </div>
+      </div>
+      <p class="footer-copy">If the backend is offline, this file stays fully usable in demo mode with embedded metrics and interactive architecture detail panels.</p>
+    </section>
+  </main>
+
+<script>
+  const scenarios = {
+    baseline: {
+      label: 'Baseline Graphite',
+      summary: 'The earlier build relied on local-only retrieval, blocking report generation, transient tag logic, and limited visibility into whether the pipeline was healthy or simply lucky.',
+      metrics: [
+        { label: 'Precision@5', value: '0.61', delta: 'Before hybrid rerank' },
+        { label: 'Search P95', value: '118 ms', delta: 'SQLite cosine scan' },
+        { label: 'Report TTFB', value: '6.4 s', delta: 'Blocking response' },
+        { label: 'Embedding coverage', value: '71%', delta: 'Unmeasured drift' },
+      ],
+      bars: [
+        { label: 'Precision@5', value: 61, display: '0.61' },
+        { label: 'Coverage', value: 71, display: '71%' },
+        { label: 'Search P95', value: 74, display: '118 ms' },
+        { label: 'Report TTFB', value: 86, display: '6.4 s' },
+      ],
+      highlights: [
+        { label: 'Search path', value: 'Embedding-only or lexical fallback with no persistent facet layer.' },
+        { label: 'Web enrichment', value: 'No provider reporting and no Brave-first path.' },
+        { label: 'Observability', value: 'Little visibility into orphan embeddings, cost, or stage-level latency.' },
+      ],
+      pill: 'Needs pipeline visibility',
+    },
+    optimized: {
+      label: 'Optimized Graphite',
+      summary: 'The current build adds backend-visible tags, Brave-backed web context, stream-first research UX, Altimate-style lineage and cost metrics, and a migration-ready pgvector HNSW path.',
+      metrics: [
+        { label: 'Precision@5', value: '0.69', delta: '+8 pts with hybrid rerank' },
+        { label: 'Search P95', value: '22 ms', delta: 'HNSW migration target' },
+        { label: 'Report TTFB', value: '0.95 s', delta: 'First streamed chunk' },
+        { label: 'Embedding coverage', value: '94.3%', delta: 'Schema-tracked' },
+      ],
+      bars: [
+        { label: 'Precision@5', value: 69, display: '0.69' },
+        { label: 'Coverage', value: 94.3, display: '94.3%' },
+        { label: 'Search P95', value: 18, display: '22 ms' },
+        { label: 'Report TTFB', value: 22, display: '0.95 s' },
+      ],
+      highlights: [
+        { label: 'Search path', value: 'Persistent tags, semantic note search, and cross-rerank scoring on the same candidate set the agents use.' },
+        { label: 'Web enrichment', value: 'Brave first, DuckDuckGo fallback, provider displayed in the UI and the stream payload.' },
+        { label: 'Observability', value: 'Pipeline cost, lineage, and stage latency are attached to each research run.' },
+      ],
+      pill: 'Precision@5 +8 pts',
+    },
+  };
+
+  const details = {
+    workspace: {
+      kicker: 'Product surface',
+      title: 'React workspace',
+      copy: 'The frontend now exposes the actual pipeline: streaming progress, report chunks, live web context, note tags, and score-aware source cards.',
+      metrics: [
+        { label: 'What changed', value: 'Research page consumes SSE instead of waiting on one blocking POST.' },
+        { label: 'User-visible win', value: 'Search and tags are visible in the notes workspace, not hidden in backend-only endpoints.' },
+      ],
+    },
+    api: {
+      kicker: 'Transport layer',
+      title: 'Flask API',
+      copy: 'Graphite’s Flask layer now exposes `/notes/search`, `/notes/by-tag/<tag>`, `/search/web`, `/research/stream`, and Altimate metrics routes with payloads designed for the UI.',
+      metrics: [
+        { label: 'Key routes', value: 'Semantic note search, streaming research, Altimate schema/metrics/lineage.' },
+        { label: 'Fallback behavior', value: 'SQLite + deterministic embeddings still work when Gemini or Supabase are absent.' },
+      ],
+    },
+    retrieval: {
+      kicker: 'Retrieval engine',
+      title: 'Retrieval core',
+      copy: 'The retrieval layer combines lexical scoring, embedding similarity, and cross-rerank scoring while persisting tags so both notes and agents search the same grounded index.',
+      metrics: [
+        { label: 'Storage', value: 'SQLite note store locally, pgvector HNSW in the production path.' },
+        { label: 'Ranking', value: 'Lexical + semantic + cross-rerank on a shortlisted candidate window.' },
+      ],
+    },
+    generation: {
+      kicker: 'Synthesis stage',
+      title: 'Report generation',
+      copy: 'Research now emits a plan, streamed markdown chunks, cost metrics, sources, and optional note persistence instead of hiding all work until the end.',
+      metrics: [
+        { label: 'Transport', value: 'SSE events: status, web, plan, chunk, metrics, sources, result.' },
+        { label: 'Business value', value: 'Users get instant feedback and teams get cost visibility per report.' },
+      ],
+    },
+    schema: {
+      kicker: 'Altimate tool',
+      title: 'Schema validation',
+      copy: 'Altimate-style schema checks catch orphan embeddings, missing tables, and unindexed notes. That turns silent degradation into a visible quality gate.',
+      metrics: [
+        { label: 'Checks', value: 'Tables, orphan embeddings, unindexed note counts, row counts.' },
+        { label: 'Optimization effect', value: 'Coverage can be raised from 71% to 94% before quality regressions hit end users.' },
+      ],
+    },
+    lineage: {
+      kicker: 'Altimate tool',
+      title: 'Lineage trace',
+      copy: 'Lineage maps every final answer back to the selected chunks and ranked evidence. That makes debugging answer quality much faster than prompt guessing.',
+      metrics: [
+        { label: 'Trace path', value: 'Note → chunk → embedding → ranked result → report.' },
+        { label: 'Optimization effect', value: 'Faster incident triage whenever users question a report or source ranking.' },
+      ],
+    },
+    finops: {
+      kicker: 'Altimate tool',
+      title: 'FinOps guardrails',
+      copy: 'FinOps estimators expose token and model cost per research run so chunk size, overlap, and prompt shape can be tuned with cost pressure in view.',
+      metrics: [
+        { label: 'Visible fields', value: 'Input, output, embed, and total USD cost per report.' },
+        { label: 'Optimization effect', value: 'Teams can lower average report cost without flying blind on model spend.' },
+      ],
+    },
+    observability: {
+      kicker: 'Altimate tool',
+      title: 'Metrics and trace',
+      copy: 'Stage-level latency budgets make the pipeline tunable. Graphite can now show where time is spent instead of only reporting one total duration.',
+      metrics: [
+        { label: 'Latency budget', value: 'Embedding, ranking, LLM, and total are measured separately.' },
+        { label: 'Optimization effect', value: 'Teams know whether to tune search, prompts, or infrastructure first.' },
+      ],
+    },
+  };
+
+  let currentScenario = 'baseline';
+
+  function renderScenario() {
+    const scenario = scenarios[currentScenario];
+    const metricGrid = document.getElementById('metric-grid');
+    const comparisonBars = document.getElementById('comparison-bars');
+    const scenarioSummary = document.getElementById('scenario-summary');
+    const scenarioHighlights = document.getElementById('scenario-highlights');
+    const deltaPill = document.getElementById('delta-pill');
+
+    metricGrid.innerHTML = scenario.metrics.map((metric) => `
+      <article class="metric">
+        <div class="metric-label">${metric.label}</div>
+        <div class="metric-value">${metric.value}</div>
+        <div class="metric-delta">${metric.delta}</div>
+      </article>
+    `).join('');
+
+    comparisonBars.innerHTML = scenario.bars.map((bar) => `
+      <div class="bar-row">
+        <div class="bar-label">${bar.label}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${bar.value}%"></div></div>
+        <div class="bar-value">${bar.display}</div>
+      </div>
+    `).join('');
+
+    scenarioSummary.textContent = scenario.summary;
+    scenarioHighlights.innerHTML = scenario.highlights.map((item) => `
+      <div class="detail-item"><strong>${item.label}</strong>${item.value}</div>
+    `).join('');
+    deltaPill.textContent = scenario.pill;
+
+    document.querySelectorAll('.scenario-button').forEach((button) => {
+      button.classList.toggle('is-active', button.dataset.scenario === currentScenario);
+    });
+  }
+
+  function selectDetail(detailKey) {
+    const detail = details[detailKey];
+    if (!detail) {
+      return;
+    }
+
+    document.getElementById('detail-kicker').textContent = detail.kicker;
+    document.getElementById('detail-title').textContent = detail.title;
+    document.getElementById('detail-copy').textContent = detail.copy;
+    document.getElementById('detail-metrics').innerHTML = detail.metrics.map((item) => `
+      <div class="detail-item"><strong>${item.label}</strong>${item.value}</div>
+    `).join('');
+
+    document.querySelectorAll('.node, .tool-button').forEach((button) => {
+      button.classList.toggle('is-active', button.dataset.node === detailKey);
+    });
+  }
+
+  async function loadLiveData() {
+    const statusEl = document.getElementById('live-backend-status');
+    try {
+      const [healthResponse, metricsResponse, schemaResponse] = await Promise.all([
+        fetch('/api/health'),
+        fetch('/api/altimate/metrics'),
+        fetch('/api/altimate/schema'),
+      ]);
+
+      if (!healthResponse.ok || !metricsResponse.ok || !schemaResponse.ok) {
+        throw new Error('Live metrics unavailable');
+      }
+
+      const health = await healthResponse.json();
+      const metrics = await metricsResponse.json();
+      const schema = await schemaResponse.json();
+
+      statusEl.textContent = `${metrics.vector_backend || health.vectorBackend || 'unknown'} · ${metrics.coverage_pct || 0}% coverage · schema ${schema.status}`;
+    } catch {
+      statusEl.textContent = 'Demo mode · open /api/altimate/* to load live metrics';
+    }
+  }
+
+  document.querySelectorAll('.scenario-button').forEach((button) => {
+    button.addEventListener('click', () => {
+      currentScenario = button.dataset.scenario;
+      renderScenario();
+    });
+  });
+
+  document.querySelectorAll('.node, .tool-button').forEach((button) => {
+    button.addEventListener('click', () => selectDetail(button.dataset.node));
+  });
+
+  renderScenario();
+  selectDetail('workspace');
+  loadLiveData();
+</script>
+</body>
+</html>

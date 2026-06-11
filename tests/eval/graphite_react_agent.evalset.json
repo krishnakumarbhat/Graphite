@@ -1,0 +1,200 @@
+{
+  "eval_set_id": "graphite_react_agent_eval_set",
+  "name": "Graphite ReAct Agent Evaluation Set",
+  "description": "Comprehensive evaluation set for the Graphite ReAct agent covering note CRUD, search, project analysis, and financial research. Based on ADK-eval 10 insights.",
+  "eval_cases": [
+    {
+      "eval_id": "note_search_basic",
+      "conversation": [
+        {
+          "invocation_id": "inv-search-001",
+          "user_content": {
+            "parts": [{"text": "Search my notes for anything about architecture"}],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [{"text": "I found notes related to architecture in your workspace."}],
+            "role": "model"
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "search_notes", "args": {"query": "architecture", "user_id": "web-local"}}
+            ],
+            "intermediate_responses": []
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "graphite",
+        "user_id": "web-local",
+        "state": {}
+      }
+    },
+    {
+      "eval_id": "note_create_basic",
+      "conversation": [
+        {
+          "invocation_id": "inv-create-001",
+          "user_content": {
+            "parts": [{"text": "Create a note titled 'Meeting Notes' with content about the Q4 planning session"}],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [{"text": "I've created a new note titled 'Meeting Notes' about the Q4 planning session."}],
+            "role": "model"
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "create_note", "args": {"title": "Meeting Notes", "content": "## Q4 Planning Session\n\n...", "user_id": "web-local"}}
+            ],
+            "intermediate_responses": []
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "graphite",
+        "user_id": "web-local",
+        "state": {}
+      }
+    },
+    {
+      "eval_id": "note_list_all",
+      "conversation": [
+        {
+          "invocation_id": "inv-list-001",
+          "user_content": {
+            "parts": [{"text": "Show me all my notes"}],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [{"text": "Here are all your notes in the workspace."}],
+            "role": "model"
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "list_all_notes", "args": {"user_id": "web-local"}}
+            ],
+            "intermediate_responses": []
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "graphite",
+        "user_id": "web-local",
+        "state": {}
+      }
+    },
+    {
+      "eval_id": "project_analysis",
+      "conversation": [
+        {
+          "invocation_id": "inv-project-001",
+          "user_content": {
+            "parts": [{"text": "Analyze the project at /media/pope/projecteo/github_proj/a_resume/Graphite and create detailed notes about it"}],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [{"text": "I've analyzed the Graphite project and created detailed notes covering the architecture, tech stack, and setup instructions."}],
+            "role": "model"
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "analyze_project", "args": {"project_path": "/media/pope/projecteo/github_proj/a_resume/Graphite", "project_name": "Graphite"}},
+              {"name": "create_note", "args": {"title": "Graphite Project Analysis", "content": "## Graphite Project\n\n..."}}
+            ],
+            "intermediate_responses": []
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "graphite",
+        "user_id": "web-local",
+        "state": {}
+      }
+    },
+    {
+      "eval_id": "financial_research",
+      "conversation": [
+        {
+          "invocation_id": "inv-research-001",
+          "user_content": {
+            "parts": [{"text": "Research AAPL stock and give me the analysis"}],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [{"text": "Here's my analysis of AAPL including technical indicators."}],
+            "role": "model"
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "run_financial_research", "args": {"ticker": "AAPL", "algorithms": "ma,rsi,macd,bollinger"}}
+            ],
+            "intermediate_responses": []
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "graphite",
+        "user_id": "web-local",
+        "state": {}
+      }
+    },
+    {
+      "eval_id": "multi_step_search_and_update",
+      "conversation": [
+        {
+          "invocation_id": "inv-multi-001",
+          "user_content": {
+            "parts": [{"text": "Find my note about meetings and update it to include action items: review budget, schedule follow-up"}],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [{"text": "I found and updated your meeting note with the action items."}],
+            "role": "model"
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "search_notes", "args": {"query": "meetings"}},
+              {"name": "get_note_by_id", "args": {"note_id": "note-placeholder"}},
+              {"name": "update_note", "args": {"note_id": "note-placeholder", "title": "Meeting Notes", "content": "..."}}
+            ],
+            "intermediate_responses": []
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "graphite",
+        "user_id": "web-local",
+        "state": {}
+      }
+    },
+    {
+      "eval_id": "research_and_note_creation",
+      "conversation": [
+        {
+          "invocation_id": "inv-research-note-001",
+          "user_content": {
+            "parts": [{"text": "Research GOOGL stock and create a detailed note with the findings"}],
+            "role": "user"
+          },
+          "final_response": {
+            "parts": [{"text": "I've researched GOOGL and created a detailed analysis note."}],
+            "role": "model"
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              {"name": "run_financial_research", "args": {"ticker": "GOOGL"}},
+              {"name": "create_note", "args": {"title": "GOOGL Stock Analysis"}}
+            ],
+            "intermediate_responses": []
+          }
+        }
+      ],
+      "session_input": {
+        "app_name": "graphite",
+        "user_id": "web-local",
+        "state": {}
+      }
+    }
+  ]
+}

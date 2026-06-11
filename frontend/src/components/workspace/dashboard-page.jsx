@@ -11,6 +11,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import {
+  BarChart2,
   BrainCircuit,
   Database,
   FileText,
@@ -218,8 +219,8 @@ export function DashboardPage() {
               API: {backendHealth.status === 'ok' ? 'Connected' : 'Offline'}
             </Badge>
           )}
-          {backendHealth?.pineconeConfigured && (
-            <Badge className="bg-purple-500/15 text-purple-600">Pinecone: Active</Badge>
+          {backendHealth?.PGVECTORConfigured && (
+            <Badge className="bg-purple-500/15 text-purple-600">PGVECTOR: Active</Badge>
           )}
           {backendHealth?.supabaseConfigured && (
             <Badge className="bg-blue-500/15 text-blue-600">Supabase: Mirroring</Badge>
@@ -248,6 +249,10 @@ export function DashboardPage() {
           <Button className="rounded-xl" onClick={() => navigate('/notes')}>
             <FileText className="mr-2 h-4 w-4" />
             Open notes
+          </Button>
+          <Button className="rounded-xl" onClick={() => navigate('/research')} variant="outline">
+            <BarChart2 className="mr-2 h-4 w-4" />
+            Open research
           </Button>
         </div>
       </section>
@@ -282,7 +287,7 @@ export function DashboardPage() {
             <CardDescription className="flex items-center gap-2 text-xs uppercase tracking-widest">
               <Shield className="h-4 w-4" /> Model & memory
             </CardDescription>
-            <CardTitle className="text-xl">Gemini + Pinecone</CardTitle>
+            <CardTitle className="text-xl">Gemini + pgvector</CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -470,7 +475,7 @@ export function DashboardPage() {
                       ) : (
                         <Database className="mr-2 h-4 w-4" />
                       )}
-                      Store in Pinecone
+                      Store in PGVECTOR
                     </Button>
                   </CardContent>
                 </Card>
@@ -578,9 +583,9 @@ export function DashboardPage() {
                       </Badge>
                     </div>
                     <div className="flex justify-between">
-                      <span>Pinecone</span>
-                      <Badge variant={backendHealth?.pineconeConfigured ? 'default' : 'secondary'}>
-                        {backendHealth?.pineconeConfigured ? 'Active' : 'Not connected'}
+                      <span>PGVECTOR</span>
+                      <Badge variant={backendHealth?.PGVECTORConfigured ? 'default' : 'secondary'}>
+                        {backendHealth?.PGVECTORConfigured ? 'Active' : 'Not connected'}
                       </Badge>
                     </div>
                     <div className="flex justify-between">

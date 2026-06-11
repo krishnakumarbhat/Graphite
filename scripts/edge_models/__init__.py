@@ -1,1 +1,0 @@
-"""Edge model tooling for Graphite."""
