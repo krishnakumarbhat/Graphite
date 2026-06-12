@@ -180,7 +180,7 @@ class ServiceRegistry:
   PGVECTOR_index: Any = field(init=False, default=None)
 
   def __post_init__(self) -> None:
-    self.http_client = httpx.Client(timeout=30.0)
+    self.http_client = httpx.Client(timeout=90.0)
     self.supabase = self._init_supabase()
     self.note_store = build_note_store(
       self.settings.notes_database_path,

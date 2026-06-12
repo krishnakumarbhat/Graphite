@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     validation_alias=AliasChoices('gemini_api', 'GEMINI_API', 'GEMINI_API_KEY'),
   )
   gemini_model: str = Field(default='gemini-3.5-flash', alias='GEMINI_MODEL')
-  gemini_fallback_model: str = Field(default='gemini-3.1-flash', alias='GEMINI_FALLBACK_MODEL')
+  gemini_fallback_model: str = Field(default='gemini-3.5-flash_preview', alias='GEMINI_FALLBACK_MODEL')
   gemini_retry_count: int = Field(default=3, alias='GEMINI_RETRY_COUNT')
   gemini_embedding_model: str = Field(default='text-embedding-004', alias='GEMINI_EMBEDDING_MODEL')
   gemini_thinking_level: str = Field(default='medium', alias='GEMINI_THINKING_LEVEL')
